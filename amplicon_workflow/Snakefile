@@ -31,9 +31,11 @@ configfile: "config.yaml"
 # snakemake --config workdir="data/amplicon_workflow/"
 workdir: config["workdir"]
 
-#rull all:
-#    input:
-#        "{working_dir}".format(working_dir=config["workdir"])
+rule all:
+    input:
+        "step2_join/fastqjoin.join.fastq"
+        #"step3_convert_to_fasta/trimmed_joined.fasta"
+
 
 rule trimm:
     input:
@@ -44,25 +46,41 @@ rule trimm:
         reverse_paired = "step1_trimmomatic/output_R2_paired.fastq",
         #forward_unpaired = "step1_trimmomatic/output_R1_unpaired.fastq",
         #reverse_unpaired = "step1_trimmomatic/output_R2_unpaired.fastq",
+    params:
+        output_dir = "step1_trimmomatic"
     message:
         "Trimming input sequences with Trimomatic 0.36"
     shell:
         """
         java -jar ~/bin/trimmomatic-0.36.jar PE -threads 8 -phred33 {input.forward} {input.reverse} \
-        {output.forward_paired} step1_trimmomatic/output_R1_unpaired.fastq {output.reverse_paired} step1_trimmomatic/output_R2_unpaired.fastq \
+        {output.forward_paired} {params.output_dir}/output_R1_unpaired.fastq {output.reverse_paired} {params.output_dir}/output_R2_unpaired.fastq \
         LEADING:25 TRAILING:25 SLIDINGWINDOW:1:25 MINLEN:100
         """
+
 
 rule join:
     input:
         forward_paired = "step1_trimmomatic/output_R1_paired.fastq",
-        reverse_paired = "step1_trimmomatic/output_R2_paired.fastq",
+        reverse_paired = "step1_trimmomatic/output_R2_paired.fastq"
     output:
         joined_seqs = "step2_join/fastqjoin.join.fastq",
-        unjoined_forward_seqs = "step2_join/fastqjoin.un1.fastq",
-        unjoined_reverse_seqs = "step2_join/fastqjoin.un2.fastq",
+        #unjoined_forward_seqs = "step2_join/fastqjoin.un1.fastq",
+        #unjoined_reverse_seqs = "step2_join/fastqjoin.un2.fastq",
     message:
         "Joining forward and reverse paired-end sequences with Qiime 1.9 join_paired_ends.py script."
     shell:
-        "join_paired_ends.py -f {input.forward_paired} -r {input.reverse_paired} -o step2_join/ -m fastq-join -j 20 -p 2"
-        
+        """
+        join_paired_ends.py -f {input.forward_paired} -r {input.reverse_paired} -o step2_join/ -m fastq-join -j 20 -p 2
+        """
+
+
+#rule convert_fastq_to_fasta:
+#    input:
+#        "step2_join/fastqjoin.join.fastq"
+#    output:
+#        "step3_convert_to_fasta/trimmed_joined.fasta"
+#    shell:
+#        """
+#        awk 'BEGIN{{P=1}}{{if(P==1||P==2){{gsub(/^[@]/,">");print}}; if(P==4)P=0; P++}}' {input} > {output}
+#        """ 
+

@@ -10,7 +10,8 @@
 
 # Name (path) of the directory where input files and all output files
 # will be located
-workdir: "workflow_results"
+workdir: "data"
+results_dir: "output"
 
 # Input files to the workflow
 initial_input_forward: "input_ENV0047_S21_R1_001.fastq.gz"
