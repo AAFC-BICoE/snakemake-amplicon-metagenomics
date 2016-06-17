@@ -1,0 +1,68 @@
+""" Oksana Korol, June 15, 2016
+
+Amplicon Metagenomics Workflow for GRDI EcoBiomics project.
+
+Version 0.1 (trial)
+
+Steps of the workflow:
+1. Trimming
+Tool: trimmomatic version 0.36
+
+2. Overlapping - aligning forward and reverse sequences
+Tool: Qiime. Script: join_paired_ends.py. This script have to be substituted for multiple_join_paired_ends.py in HPC cluster.
+
+3. Chimera checking
+Tool: Qiime. identify_chimeric_seqs.py script. This step may end up being moved after OTU clustering and picking representative sequences. Since it takes a lot of processing time, it might make sense to execute it on representative sequences, instead of the whole set.
+
+4. OTU Picking and classification
+Tools: Qiime. Scripts:
+ *  pick_de_novo_otus.py did not work well on the test data, but is very convenient and has all the steps embedded. It does not have an option to cluster using CD-HIT, though.
+ *  Sequence of manual steps:
+    -    Cluster OTU: pick_otus.py
+    -    Pick representative sequences: pick_rep_set.py
+    -    Classify: assign_taxonomy.py
+    -    Make OTU: make_otu_table.py
+
+"""
+
+configfile: "config.yaml"
+
+# Workdir can be changed when executing workflow:
+# snakemake --config workdir="data/amplicon_workflow/"
+workdir: config["workdir"]
+
+#rull all:
+#    input:
+#        "{working_dir}".format(working_dir=config["workdir"])
+
+rule trimm:
+    input:
+        forward = config["initial_input_forward"],
+        reverse = config["initial_input_reverse"],
+    output:
+        forward_paired = "step1_trimmomatic/output_R1_paired.fastq",
+        reverse_paired = "step1_trimmomatic/output_R2_paired.fastq",
+        #forward_unpaired = "step1_trimmomatic/output_R1_unpaired.fastq",
+        #reverse_unpaired = "step1_trimmomatic/output_R2_unpaired.fastq",
+    message:
+        "Trimming input sequences with Trimomatic 0.36"
+    shell:
+        """
+        java -jar ~/bin/trimmomatic-0.36.jar PE -threads 8 -phred33 {input.forward} {input.reverse} \
+        {output.forward_paired} step1_trimmomatic/output_R1_unpaired.fastq {output.reverse_paired} step1_trimmomatic/output_R2_unpaired.fastq \
+        LEADING:25 TRAILING:25 SLIDINGWINDOW:1:25 MINLEN:100
+        """
+
+rule join:
+    input:
+        forward_paired = "step1_trimmomatic/output_R1_paired.fastq",
+        reverse_paired = "step1_trimmomatic/output_R2_paired.fastq",
+    output:
+        joined_seqs = "step2_join/fastqjoin.join.fastq",
+        unjoined_forward_seqs = "step2_join/fastqjoin.un1.fastq",
+        unjoined_reverse_seqs = "step2_join/fastqjoin.un2.fastq",
+    message:
+        "Joining forward and reverse paired-end sequences with Qiime 1.9 join_paired_ends.py script."
+    shell:
+        "join_paired_ends.py -f {input.forward_paired} -r {input.reverse_paired} -o step2_join/ -m fastq-join -j 20 -p 2"
+        

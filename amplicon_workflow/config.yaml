@@ -1,0 +1,23 @@
+#
+# This is set up information for the Amplicon Metagenomics Workflow,
+# implemented in Snakemake. Set the parameters below, save the file and 
+# run snakemake.
+# Note that lines beginning with # are comments, i.e. they are ignored.
+#
+# Author: Oksana Korol
+# Date: 16.06.2016
+#
+
+# Name (path) of the directory where input files and all output files
+# will be located
+workdir: "workflow_results"
+
+# Input files to the workflow
+initial_input_forward: "input_ENV0047_S21_R1_001.fastq.gz"
+initial_input_reverse: "input_ENV0047_S21_R2_001.fastq.gz"
+ 
+# Trimmomatic parameters
+trimmomatic:
+    input: ""
+    output: ""
+    
