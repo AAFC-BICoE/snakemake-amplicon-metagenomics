@@ -33,8 +33,7 @@ workdir: config["workdir"]
 
 rule all:
     input:
-        "step2_join/fastqjoin.join.fastq"
-        #"step3_convert_to_fasta/trimmed_joined.fasta"
+        "step3_convert_to_fasta/trimmed_joined.fasta"
 
 
 rule trimm:
@@ -74,13 +73,21 @@ rule join:
         """
 
 
-#rule convert_fastq_to_fasta:
-#    input:
-#        "step2_join/fastqjoin.join.fastq"
-#    output:
-#        "step3_convert_to_fasta/trimmed_joined.fasta"
-#    shell:
-#        """
-#        awk 'BEGIN{{P=1}}{{if(P==1||P==2){{gsub(/^[@]/,">");print}}; if(P==4)P=0; P++}}' {input} > {output}
-#        """ 
+rule convert_fastq_to_fasta:
+    input:
+        "step2_join/fastqjoin.join.fastq"
+    output:
+        "step3_convert_to_fasta/trimmed_joined.fasta"
+    shell:
+        """
+        awk 'BEGIN{{P=1}}{{if(P==1||P==2){{gsub(/^[@]/,">");print}}; if(P==4)P=0; P++}}' {input} > {output}
+        """ 
 
+rule cluster_otus:
+    input:
+        "step3_convert_to_fasta/trimmed_joined.fasta"
+    output:
+    shell:
+        """
+        pick_otus.py -i {input} -m cdhit -s 0.97
+        """
