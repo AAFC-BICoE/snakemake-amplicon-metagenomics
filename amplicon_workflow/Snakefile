@@ -33,7 +33,7 @@ workdir: config["workdir"]
 
 rule all:
     input:
-        "step3_convert_to_fasta/trimmed_joined.fasta"
+        "step4_pick_otu/trimmed_joined_otus.txt"
 
 
 rule trimm:
@@ -55,6 +55,7 @@ rule trimm:
         {output.forward_paired} {params.output_dir}/output_R1_unpaired.fastq {output.reverse_paired} {params.output_dir}/output_R2_unpaired.fastq \
         LEADING:25 TRAILING:25 SLIDINGWINDOW:1:25 MINLEN:100
         """
+        #LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:36
 
 
 rule join:
@@ -69,8 +70,9 @@ rule join:
         "Joining forward and reverse paired-end sequences with Qiime 1.9 join_paired_ends.py script."
     shell:
         """
-        join_paired_ends.py -f {input.forward_paired} -r {input.reverse_paired} -o step2_join/ -m fastq-join -j 20 -p 2
+        join_paired_ends.py -f {input.forward_paired} -r {input.reverse_paired} -o step2_join/ -m fastq-join 
         """
+        #-j 20 -p 2
 
 
 rule convert_fastq_to_fasta:
@@ -87,7 +89,8 @@ rule cluster_otus:
     input:
         "step3_convert_to_fasta/trimmed_joined.fasta"
     output:
+        "step4_pick_otu/trimmed_joined_otus.txt"
     shell:
         """
-        pick_otus.py -i {input} -m cdhit -s 0.97
+        pick_otus.py -i {input} -m cdhit -s 0.97 -o step4_pick_otu 
         """
