@@ -33,7 +33,7 @@ workdir: config["workdir"]
 
 rule all:
     input:
-        "step4_pick_otu/trimmed_joined_otus.txt"
+        "step7_otu/otu_table.otu"
 
 
 rule trimm:
@@ -112,8 +112,29 @@ rule classify:
         reference_fasta = "unite.fasta",
         reference_txt = "unite.txt"
     output:
-        "step6_classify/zzz.fasta"
+        "step6_classify/rep_set_tax_assignments.txt"
     shell:
         """
         assign_taxonomy.py -i {input.dataset} -m mothur -r {input.reference_fasta} -t {input.reference_txt} -c 0.70 -o step6_classify
+        """
+
+rule make_otu:
+    input: 
+        assigned_taxonomy = "step6_classify/rep_set_tax_assignments.txt",
+        otu = "step4_pick_otu/trimmed_joined_otus.txt"
+    output:
+        "step7_otu/otu_table.biom"
+    shell:
+        """
+        make_otu_table.py -i {input.otu} -t {input.assigned_taxonomy} -o {output}
+        """
+
+rule convert_otu_table:
+    input:
+        "step7_otu/otu_table.biom"
+    output:
+        "step7_otu/otu_table.otu"
+    shell:
+        """
+        biom convert -i {input} -o {output} --to-tsv
         """
