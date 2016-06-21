@@ -94,3 +94,26 @@ rule cluster_otus:
         """
         pick_otus.py -i {input} -m cdhit -s 0.97 -o step4_pick_otu 
         """
+
+rule pick_representatives:
+    input:
+        otu = "step4_pick_otu/trimmed_joined_otus.txt",
+        fasta = "step3_convert_to_fasta/trimmed_joined.fasta"
+    output:
+        "step5_pick_representatives/rep_set.fasta"
+    shell:
+        """
+        pick_rep_set.py -i {input.otu} -f {input.fasta} -o {output}
+        """
+
+rule classify:
+    input:
+        dataset = "step5_pick_representatives/rep_set.fasta",
+        reference_fasta = "unite.fasta",
+        reference_txt = "unite.txt"
+    output:
+        "step6_classify/zzz.fasta"
+    shell:
+        """
+        assign_taxonomy.py -i {input.dataset} -m mothur -r {input.reference_fasta} -t {input.reference_txt} -c 0.70 -o step6_classify
+        """
