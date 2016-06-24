@@ -33,6 +33,8 @@ workdir: config["workdir"]
 
 rule all:
     input:
+        #"step1_trimmomatic/output_R1_paired.fastq",
+        #"step1_trimmomatic/output_R2_paired.fastq"
         "step7_otu/otu_table.otu"
 
 
@@ -53,7 +55,8 @@ rule trimm:
         """
         java -jar ~/bin/trimmomatic-0.36.jar PE -threads 8 -phred33 {input.forward} {input.reverse} \
         {output.forward_paired} {params.output_dir}/output_R1_unpaired.fastq {output.reverse_paired} {params.output_dir}/output_R2_unpaired.fastq \
-        LEADING:25 TRAILING:25 SLIDINGWINDOW:1:25 MINLEN:100
+        LEADING:{config[trimmomatic][LEADING]} TRAILING:{config[trimmomatic][TRAILING]} SLIDINGWINDOW:{config[trimmomatic][SLIDINGWINDOW]} \
+        MINLEN:{config[trimmomatic][MINLEN]}
         """
         #LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:36
 
@@ -92,7 +95,7 @@ rule cluster_otus:
         "step4_pick_otu/trimmed_joined_otus.txt"
     shell:
         """
-        pick_otus.py -i {input} -m cdhit -s 0.97 -o step4_pick_otu 
+        pick_otus.py -i {input} -m cdhit -s {config[pick_otus][s]} -o step4_pick_otu 
         """
 
 rule pick_representatives:
@@ -115,7 +118,7 @@ rule classify:
         "step6_classify/rep_set_tax_assignments.txt"
     shell:
         """
-        assign_taxonomy.py -i {input.dataset} -m mothur -r {input.reference_fasta} -t {input.reference_txt} -c 0.70 -o step6_classify
+        assign_taxonomy.py -i {input.dataset} -m mothur -r {input.reference_fasta} -t {input.reference_txt} -c {config[assign_taxonomy][c]} -o step6_classify
         """
 
 rule make_otu:

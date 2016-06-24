@@ -19,6 +19,13 @@ initial_input_reverse: "input_ENV0047_S21_R2_001.fastq.gz"
  
 # Trimmomatic parameters
 trimmomatic:
-    input: ""
-    output: ""
-    
+    LEADING: "25"
+    TRAILING: "25"
+    SLIDINGWINDOW: "1:25"
+    MINLEN: "100"
+   
+pick_otus:
+    s: "0.97"
+
+assign_taxonomy:
+    c: "0.70"
