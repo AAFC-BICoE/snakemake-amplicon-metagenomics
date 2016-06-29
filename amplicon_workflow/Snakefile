@@ -46,12 +46,15 @@ rule initial_data_quality:
         "step0_initial_data_quality/input_ENV0047_S21_R1_001_fastqc.html",
         "step0_initial_data_quality/input_ENV0047_S21_R2_001_fastqc.html",
     message:
-        "Running FastQC to determine the quality of the initial input data."
+        "\n ===== Running FastQC to determine the quality of the initial input data."
     benchmark:
         "benchmarks/step0_initial_data_quality.txt"
+    threads: config["threads"]
     shell:
         """
-        fastqc {input} --outdir=step0_initial_data_quality
+        initial_data_quality_cmd="fastqc {input} --outdir=step0_initial_data_quality" ;\
+        echo "Executed command:\n" $initial_data_quality_cmd ;\
+        $initial_data_quality_cmd 
         """
 
 rule trimm:
@@ -68,9 +71,10 @@ rule trimm:
     params:
         output_dir = "step1_trimmomatic"
     message:
-        "Trimming input sequences with Trimomatic 0.36"
+        "\n ===== Trimming input sequences with Trimomatic 0.36"
     benchmark:
         "benchmarks/step1_trimmomatic.txt"
+    threads: config["threads"]
     shell:
         """
         java -jar ~/bin/trimmomatic-0.36.jar PE -threads 8 -phred33 {input.forward} {input.reverse} \
@@ -89,12 +93,15 @@ rule trimm_quality:
         "step1_trimmomatic/quality/output_R1_paired_fastqc.html",
         "step1_trimmomatic/quality/output_R2_paired_fastqc.html"
     message:
-        "Running FastQC to check quality of the trimming."
+        "\n ===== Running FastQC to check quality of the trimming."
     benchmark:
         "benchmarks/step1_trimmomatic_quality.txt"
+    threads: config["threads"]
     shell:
         """
-        fastqc {input} --outdir=step1_trimmomatic/quality
+        trimm_quality_cmd="fastqc {input} --outdir=step1_trimmomatic/quality" ;\
+        echo "Executed command:\n" $trimm_quality_cmd ;\
+        $trimm_quality_cmd
         """
 
 rule join:
@@ -108,12 +115,15 @@ rule join:
         #unjoined_forward_seqs = "step2_join/fastqjoin.un1.fastq",
         #unjoined_reverse_seqs = "step2_join/fastqjoin.un2.fastq",
     message:
-        "Joining forward and reverse paired-end sequences with Qiime 1.9 join_paired_ends.py script."
+        "\n ===== Joining forward and reverse paired-end sequences with Qiime 1.9 join_paired_ends.py script."
     benchmark:
         "benchmarks/step2_join.txt"
+    threads: config["threads"]
     shell:
         """
-        join_paired_ends.py -f {input.forward_paired} -r {input.reverse_paired} -o step2_join/ -m fastq-join 
+        join_cmd="join_paired_ends.py -f {input.forward_paired} -r {input.reverse_paired} -o step2_join/ -m fastq-join" ;\
+        echo "Executed command:\n" $join_cmd ;\
+        $join_cmd
         """
         #-j 20 -p 2
 
@@ -127,9 +137,12 @@ rule join_quality:
         "Running FastQC to check quality of the join."
     benchmark:
         "benchmarks/step2_join_quality.txt"
+    threads: config["threads"]
     shell:
         """
-        fastqc {input} --outdir=step2_join/quality
+        join_quality_cmd="fastqc {input} --outdir=step2_join/quality" ;\
+        echo "Executed command:\n" $join_quality_cmd ;\
+        $join_quality_cmd
         """
 
 rule convert_fastq_to_fasta:
@@ -139,9 +152,10 @@ rule convert_fastq_to_fasta:
     output:
         "step3_convert_to_fasta/trimmed_joined.fasta"
     message:
-        "Converting fastq files to fasta."
+        "\n ===== Converting fastq files to fasta."
     benchmark:
         "benchmarks/step3_convert_to_fasta.txt"
+    threads: config["threads"]
     shell:
         """
         awk 'BEGIN{{P=1}}{{if(P==1||P==2){{gsub(/^[@]/,">");print}}; if(P==4)P=0; P++}}' {input.fastq} > {output}
@@ -153,11 +167,16 @@ rule cluster_otus:
         "step3_convert_to_fasta/trimmed_joined.fasta"
     output:
         "step4_pick_otu/trimmed_joined_otus.txt"
+    message:
+        "\n ===== Cluster sequences into OTUs (Operational Taxonomic Units)"
     benchmark:
         "benchmarks/step4_pick_otu.txt"
+    threads: config["threads"]
     shell:
         """
-        pick_otus.py -i {input} -m cdhit -s {config[pick_otus][s]} -o step4_pick_otu 
+        cluster_otus_cmd="pick_otus.py -i {input} -m cdhit -s {config[pick_otus][s]} -o step4_pick_otu" ;\
+        echo "Executed command:\n" $cluster_otus_cmd ;\
+        $cluster_otus_cmd
         """
 
 rule pick_representatives:
@@ -167,11 +186,16 @@ rule pick_representatives:
         fasta = "step3_convert_to_fasta/trimmed_joined.fasta"
     output:
         "step5_pick_representatives/rep_set.fasta"
+    message:
+        "\n ===== Pick a representative sequence for each OTU."
     benchmark:
         "benchmarks/step5_pick_representatives.txt"
+    threads: config["threads"]
     shell:
         """
-        pick_rep_set.py -i {input.otu} -f {input.fasta} -o {output}
+        pick_representatives_cmd="pick_rep_set.py -i {input.otu} -f {input.fasta} -o {output}" ;\
+        echo "Executed command:\n" $pick_representatives_cmd ;\
+        $pick_representatives_cmd
         """
 
 rule classify:
@@ -182,11 +206,17 @@ rule classify:
         reference_txt = "unite.txt"
     output:
         "step6_classify/rep_set_tax_assignments.txt"
+    message:
+        "\n ===== Classify (i.e. assign taxonomy) to representative sequences."
     benchmark:
         "benchmarks/step6_classify.txt"
+    threads: config["threads"]
     shell:
         """
-        assign_taxonomy.py -i {input.dataset} -m mothur -r {input.reference_fasta} -t {input.reference_txt} -c {config[assign_taxonomy][c]} -o step6_classify
+        classify_cmd="assign_taxonomy.py -i {input.dataset} -m mothur -r {input.reference_fasta} -t {input.reference_txt} \
+        -c {config[assign_taxonomy][c]} -o step6_classify" ;\
+        echo "Executed command:\n" $classify_cmd ;\
+        $classify_cmd
         """
 
 rule make_otu:
@@ -196,11 +226,16 @@ rule make_otu:
         otu = "step4_pick_otu/trimmed_joined_otus.txt"
     output:
         "step7_otu/otu_table.biom"
+    message:
+        "\n ===== Make OTU table as a biom file. \n Biom file: the columns correspond to Samples and rows correspond to OTUs and the number of times a sample appears in a particular OTU."
     benchmark:
         "benchmarks/step7_otu_make_otu.txt"
+    threads: config["threads"]
     shell:
         """
-        make_otu_table.py -i {input.otu} -t {input.assigned_taxonomy} -o {output}
+        make_otu_cmd="make_otu_table.py -i {input.otu} -t {input.assigned_taxonomy} -o {output}" ;\
+        echo "Executed command:\n" $make_otu_cmd ;\
+        $make_otu_cmd
         """
 
 rule convert_otu_table:
@@ -208,9 +243,14 @@ rule convert_otu_table:
         "step7_otu/otu_table.biom"
     output:
         "step7_otu/otu_table.otu"
+    message:
+        "\n ===== Convert OTU table in biom format to tab-delimited table format. "
     benchmark:
         "benchmarks/step7_otu_convert_otu.txt"
+    threads: config["threads"]
     shell:
         """
-        biom convert -i {input} -o {output} --to-tsv
+        convert_otu_table_cmd="biom convert -i {input} -o {output} --to-tsv" ;\
+        echo "Executed command:\n" $convert_otu_table_cmd ;\
+        $convert_otu_table_cmd
         """

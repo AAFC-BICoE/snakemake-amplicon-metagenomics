@@ -10,13 +10,17 @@
 
 # Name (path) of the directory where input files and all output files
 # will be located
+# You can change this parameter when initiating workflow execution like this:
+### snakemake --config workdir="/path/to/some_other_directory"
 workdir: "data"
-results_dir: "output"
 
 # Input files to the workflow
 initial_input_forward: "input_ENV0047_S21_R1_001.fastq.gz"
 initial_input_reverse: "input_ENV0047_S21_R2_001.fastq.gz"
  
+# Number of threads to be used for execution of every tool in this workflow
+threads: 1
+
 # Trimmomatic parameters
 trimmomatic:
     LEADING: "25"
