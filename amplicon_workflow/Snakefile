@@ -2,26 +2,14 @@
 
 Amplicon Metagenomics Workflow for GRDI EcoBiomics project.
 
-Version 0.1 (trial)
+Version 0.1
 
 Steps of the workflow:
-1. Trimming
-Tool: trimmomatic version 0.36
 
-2. Overlapping - aligning forward and reverse sequences
-Tool: Qiime. Script: join_paired_ends.py. This script have to be substituted for multiple_join_paired_ends.py in HPC cluster.
-
-3. Chimera checking
-Tool: Qiime. identify_chimeric_seqs.py script. This step may end up being moved after OTU clustering and picking representative sequences. Since it takes a lot of processing time, it might make sense to execute it on representative sequences, instead of the whole set.
-
-4. OTU Picking and classification
-Tools: Qiime. Scripts:
- *  pick_de_novo_otus.py did not work well on the test data, but is very convenient and has all the steps embedded. It does not have an option to cluster using CD-HIT, though.
- *  Sequence of manual steps:
-    -    Cluster OTU: pick_otus.py
-    -    Pick representative sequences: pick_rep_set.py
-    -    Classify: assign_taxonomy.py
-    -    Make OTU: make_otu_table.py
+The firsts rule (rule all:...) specifies the final output of the workflow. 
+The rule righ after it is the first step in the workflow. The rest of the 
+steps (rules) are specified in order of execution. See message:, version:
+and other keyword to gain understanding what each step is doing.
 
 """
 
