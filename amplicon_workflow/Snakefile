@@ -19,20 +19,36 @@ configfile: "config.yaml"
 # snakemake --config workdir="data/amplicon_workflow/"
 workdir: config["workdir"]
 
+# Unpack the input files:
+import os
+samples_prefix = {f[:-16] for f in os.listdir(".") if f.endswith("R1_001.fastq.gz")}
+print(samples_prefix)
+file_names = {f[:-9] for f in os.listdir(".") if f.endswith(".fastq.gz")}
+print(file_names)
+
 rule all:
     input:
-        #"step1_trimmomatic/output_R1_paired.fastq",
-        #"step1_trimmomatic/output_R2_paired.fastq"
-        "step7_otu/otu_table.otu"
+        # initial quality -works
+        # expand("step0_initial_data_quality/{file_name}_fastqc.html", file_name=file_names),
+        
+        # trimm
+        #expand("step1_trimmomatic/{sample}_R1_001_trimmed.fastq", sample=samples_prefix),
+        #expand("step1_trimmomatic/{sample}_R2_001_trimmed.fastq", sample=samples_prefix),
+        
+        # 
+        #expand("step2_join/quality/{sample}R1_001_fastqjoin.join_fastqc.html", sample=samples_prefix),
+        #expand("step2_join/quality/{sample}R2_001_fastqjoin.join_fastqc.html", sample=samples_prefix),
+        
+        # Final step
+        #"step7_otu/otu_table.otu"
+
 
 rule initial_data_quality:
     version: "0.11.2"
     input:
-        config["initial_input_forward"],
-        config["initial_input_reverse"],
+        "{file_name}.fastq.gz",
     output:
-        "step0_initial_data_quality/input_ENV0047_S21_R1_001_fastqc.html",
-        "step0_initial_data_quality/input_ENV0047_S21_R2_001_fastqc.html",
+        "step0_initial_data_quality/{file_name}_fastqc.html",
     message:
         "\n ===== Running FastQC to determine the quality of the initial input data."
     benchmark:
@@ -48,12 +64,12 @@ rule initial_data_quality:
 rule trimm:
     version: "0.36"
     input:
-        forward = config["initial_input_forward"],
-        reverse = config["initial_input_reverse"],
-        quality = "step0_initial_data_quality/input_ENV0047_S21_R1_001_fastqc.html",
+        forward = "{sample}_R1_001.fastq.gz",
+        reverse = "{sample}_R2_001.fastq.gz",
+        quality = "step0_initial_data_quality/{sample}_R1_001_fastqc.html",
     output:
-        forward_paired = "step1_trimmomatic/output_R1_paired.fastq",
-        reverse_paired = "step1_trimmomatic/output_R2_paired.fastq",
+        forward_paired = "step1_trimmomatic/{sample}_R1_001_trimmed.fastq",
+        reverse_paired = "step1_trimmomatic/{sample}_R2_001_trimmed.fastq",
         #forward_unpaired = "step1_trimmomatic/output_R1_unpaired.fastq",
         #reverse_unpaired = "step1_trimmomatic/output_R2_unpaired.fastq",
     params:
@@ -66,7 +82,7 @@ rule trimm:
     shell:
         """
         java -jar ~/bin/trimmomatic-0.36.jar PE -threads 8 -phred33 {input.forward} {input.reverse} \
-        {output.forward_paired} {params.output_dir}/output_R1_unpaired.fastq {output.reverse_paired} {params.output_dir}/output_R2_unpaired.fastq \
+        {output.forward_paired} {params.output_dir}/{sample}_R1_unpaired.fastq {output.reverse_paired} {params.output_dir}/{sample}_R2_unpaired.fastq \
         LEADING:{config[trimmomatic][LEADING]} TRAILING:{config[trimmomatic][TRAILING]} SLIDINGWINDOW:{config[trimmomatic][SLIDINGWINDOW]} \
         MINLEN:{config[trimmomatic][MINLEN]}
         """
@@ -75,11 +91,11 @@ rule trimm:
 rule trimm_quality:
     version: "0.11.2"
     input:
-        "step1_trimmomatic/output_R1_paired.fastq",
-        "step1_trimmomatic/output_R2_paired.fastq"
+        "step1_trimmomatic/{sample}_R1_001_trimmed.fastq",
+        "step1_trimmomatic/{sample}_R2_001_trimmed.fastq",
     output:
-        "step1_trimmomatic/quality/output_R1_paired_fastqc.html",
-        "step1_trimmomatic/quality/output_R2_paired_fastqc.html"
+        "step1_trimmomatic/quality/{sample}_R1_001_trimmed_fastqc.html",
+        "step1_trimmomatic/quality/{sample}_R2_001_trimmed_fastqc.html"
     message:
         "\n ===== Running FastQC to check quality of the trimming."
     benchmark:
@@ -95,11 +111,11 @@ rule trimm_quality:
 rule join:
     version: "1.9"
     input:
-        forward_paired = "step1_trimmomatic/output_R1_paired.fastq",
-        reverse_paired = "step1_trimmomatic/output_R2_paired.fastq",
+        forward_paired = "step1_trimmomatic/{sample}_R1_001_trimmed.fastq",
+        reverse_paired = "step1_trimmomatic/{sample}_R2_001_trimmed.fastq",
         quality = "step1_trimmomatic/quality/output_R1_paired_fastqc.html"
     output:
-        joined_seqs = "step2_join/fastqjoin.join.fastq",
+        joined_seqs = "step2_join/{sample}fastqjoin.join.fastq",
         #unjoined_forward_seqs = "step2_join/fastqjoin.un1.fastq",
         #unjoined_reverse_seqs = "step2_join/fastqjoin.un2.fastq",
     message:
@@ -118,9 +134,9 @@ rule join:
 rule join_quality:
     version: "0.11.2"
     input:
-        "step2_join/fastqjoin.join.fastq"
+        "step2_join/{sample}fastqjoin.join.fastq"
     output:
-        "step2_join/quality/fastqjoin.join_fastqc.html"
+        "step2_join/quality/{sample}_fastqjoin.join_fastqc.html"
     message:
         "Running FastQC to check quality of the join."
     benchmark:
@@ -135,10 +151,10 @@ rule join_quality:
 
 rule convert_fastq_to_fasta:
     input:
-        fastq = "step2_join/fastqjoin.join.fastq",
-        quality = "step2_join/quality/fastqjoin.join_fastqc.html"
+        fastq = "step2_join/{sample}fastqjoin.join.fastq",
+        quality = "step2_join/quality/{sample}_fastqjoin.join_fastqc.html"
     output:
-        "step3_convert_to_fasta/trimmed_joined.fasta"
+        "step3_convert_to_fasta/{sample}_trimmed_joined.fasta"
     message:
         "\n ===== Converting fastq files to fasta."
     benchmark:
@@ -152,9 +168,10 @@ rule convert_fastq_to_fasta:
 rule cluster_otus:
     version: "1.9"
     input:
-        "step3_convert_to_fasta/trimmed_joined.fasta"
+        expand("step3_convert_to_fasta/{sample}_trimmed_joined.fasta", sample=samples_prefix)
+        #"step3_convert_to_fasta/{sample}_trimmed_joined.fasta"
     output:
-        "step4_pick_otu/trimmed_joined_otus.txt"
+        "step4_pick_otu/clustered_trimmed_joined_otus.txt"
     message:
         "\n ===== Cluster sequences into OTUs (Operational Taxonomic Units)"
     benchmark:
@@ -170,8 +187,8 @@ rule cluster_otus:
 rule pick_representatives:
     version: "1.9"
     input:
-        otu = "step4_pick_otu/trimmed_joined_otus.txt",
-        fasta = "step3_convert_to_fasta/trimmed_joined.fasta"
+        otu = "step4_pick_otu/clustered_trimmed_joined_otus.txt",
+        fasta = "step3_convert_to_fasta/{sample}_trimmed_joined.fasta"
     output:
         "step5_pick_representatives/rep_set.fasta"
     message:
@@ -211,7 +228,7 @@ rule make_otu:
     version: "1.9"
     input: 
         assigned_taxonomy = "step6_classify/rep_set_tax_assignments.txt",
-        otu = "step4_pick_otu/trimmed_joined_otus.txt"
+        otu = "step4_pick_otu/clustered_trimmed_joined_otus.txt"
     output:
         "step7_otu/otu_table.biom"
     message:
