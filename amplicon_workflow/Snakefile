@@ -67,8 +67,8 @@ rule trimm:
         """
         java -jar ~/bin/trimmomatic-0.36.jar PE -threads 8 -phred33 {input.forward} {input.reverse} \
         {output.forward_paired} {params.output_dir}/output_R1_unpaired.fastq {output.reverse_paired} {params.output_dir}/output_R2_unpaired.fastq \
-        LEADING:{config[trimmomatic][LEADING]} TRAILING:{config[trimmomatic][TRAILING]} SLIDINGWINDOW:{config[trimmomatic][SLIDINGWINDOW]} \
-        MINLEN:{config[trimmomatic][MINLEN]}
+        HEADCROP:{config[trimmomatic][HEADCROP]} SLIDINGWINDOW:{config[trimmomatic][SLIDINGWINDOW]} MINLEN:{config[trimmomatic][MINLEN]}
+
         """
         #LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:36
 
