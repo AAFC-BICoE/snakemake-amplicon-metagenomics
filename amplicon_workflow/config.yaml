@@ -34,10 +34,16 @@ threads: 1
 
 # Trimmomatic parameters
 trimmomatic:
-    LEADING: "25"
-    TRAILING: "25"
-    SLIDINGWINDOW: "1:25"
-    MINLEN: "100"
+    HEADCROP: "15" 
+    SLIDINGWINDOW: "4:20" 
+    MINLEN: "36"
+    
+    #LEADING: "25"
+    #TRAILING: "25"
+    #SLIDINGWINDOW: "1:25"
+    #MINLEN: "100"
+
+    #LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:36
    
 pick_otus:
     s: "0.97"
