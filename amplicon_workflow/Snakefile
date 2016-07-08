@@ -28,12 +28,12 @@ print(file_names)
 
 rule all:
     input:
-        # initial quality -works
-        # expand("step0_initial_data_quality/{file_name}_fastqc.html", file_name=file_names),
-        
         # trimm
-        #expand("step1_trimmomatic/{sample}_R1_001_trimmed.fastq", sample=samples_prefix),
-        #expand("step1_trimmomatic/{sample}_R2_001_trimmed.fastq", sample=samples_prefix),
+        expand("step1_trimmomatic/{sample}_R1_001_trimmed.fastq", sample=samples_prefix),
+        expand("step1_trimmomatic/{sample}_R2_001_trimmed.fastq", sample=samples_prefix),
+        
+        # initial quality - works
+        # expand("step0_initial_data_quality/{file_name}_fastqc.html", file_name=file_names),
         
         # 
         #expand("step2_join/quality/{sample}R1_001_fastqjoin.join_fastqc.html", sample=samples_prefix),
@@ -66,12 +66,13 @@ rule trimm:
     input:
         forward = "{sample}_R1_001.fastq.gz",
         reverse = "{sample}_R2_001.fastq.gz",
-        quality = "step0_initial_data_quality/{sample}_R1_001_fastqc.html",
+        quality = "step0_initial_data_quality/{file_name}_fastqc.html",
     output:
         forward_paired = "step1_trimmomatic/{sample}_R1_001_trimmed.fastq",
         reverse_paired = "step1_trimmomatic/{sample}_R2_001_trimmed.fastq",
-        #forward_unpaired = "step1_trimmomatic/output_R1_unpaired.fastq",
-        #reverse_unpaired = "step1_trimmomatic/output_R2_unpaired.fastq",
+        forward_unpaired = "step1_trimmomatic/{sample}_R1_unpaired.fastq",
+        reverse_unpaired = "step1_trimmomatic/{sample}_R2_unpaired.fastq",
+        quality = "step0_initial_data_quality/{file_name}_fastqc.html",
     params:
         output_dir = "step1_trimmomatic"
     message:
@@ -82,7 +83,7 @@ rule trimm:
     shell:
         """
         java -jar ~/bin/trimmomatic-0.36.jar PE -threads 8 -phred33 {input.forward} {input.reverse} \
-        {output.forward_paired} {params.output_dir}/{sample}_R1_unpaired.fastq {output.reverse_paired} {params.output_dir}/{sample}_R2_unpaired.fastq \
+        {output.forward_paired} {output.forward_unpaired} {output.reverse_paired} {output.reverse_unpaired} \
         LEADING:{config[trimmomatic][LEADING]} TRAILING:{config[trimmomatic][TRAILING]} SLIDINGWINDOW:{config[trimmomatic][SLIDINGWINDOW]} \
         MINLEN:{config[trimmomatic][MINLEN]}
         """
