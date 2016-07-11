@@ -16,7 +16,7 @@ workdir: "data"
 
 # Where the initial input to the workflow will be located. Note that this directory
 # is relative to the workdir above (i.e. the path would be <workdir>/<input_files_dir>)
-input_files_dir: "input"
+# input_files_dir: "input_data" - does not work in input
 
 # Input files to the workflow
 # Below 2 files are from Qiime tutorial

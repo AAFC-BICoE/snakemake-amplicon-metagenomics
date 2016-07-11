@@ -21,9 +21,9 @@ workdir: config["workdir"]
 
 # Unpack the input files:
 import os
-samples_prefix = {f[:-16] for f in os.listdir(".") if f.endswith("R1_001.fastq.gz")}
+samples_prefix = {f[:-16] for f in os.listdir("input") if f.endswith("R1_001.fastq.gz")}
 print(samples_prefix)
-file_names = {f[:-9] for f in os.listdir(".") if f.endswith(".fastq.gz")}
+file_names = {f[:-9] for f in os.listdir("input") if f.endswith(".fastq.gz")}
 print(file_names)
 
 rule all:
@@ -46,7 +46,7 @@ rule all:
 rule initial_data_quality:
     version: "0.11.2"
     input:
-        "{file_name}.fastq.gz",
+        "input/{file_name}.fastq.gz",
     output:
         "step0_initial_data_quality/{file_name}_fastqc.html",
     message:
@@ -64,17 +64,16 @@ rule initial_data_quality:
 rule trimm:
     version: "0.36"
     input:
-        forward = "{sample}_R1_001.fastq.gz",
-        reverse = "{sample}_R2_001.fastq.gz",
-        quality = "step0_initial_data_quality/{file_name}_fastqc.html",
+        forward = "input/{sample}_R1_001.fastq.gz",
+        reverse = "input/{sample}_R2_001.fastq.gz",
+        quality = expand("step0_initial_data_quality/{file_name}_fastqc.html", file_name=file_names),
     output:
         forward_paired = "step1_trimmomatic/{sample}_R1_001_trimmed.fastq",
         reverse_paired = "step1_trimmomatic/{sample}_R2_001_trimmed.fastq",
         forward_unpaired = "step1_trimmomatic/{sample}_R1_unpaired.fastq",
         reverse_unpaired = "step1_trimmomatic/{sample}_R2_unpaired.fastq",
-        quality = "step0_initial_data_quality/{file_name}_fastqc.html",
     params:
-        output_dir = "step1_trimmomatic"
+        #output_dir = "step1_trimmomatic"
     message:
         "\n ===== Trimming input sequences with Trimomatic 0.36"
     benchmark:
@@ -83,18 +82,18 @@ rule trimm:
     shell:
         """
         java -jar ~/bin/trimmomatic-0.36.jar PE -threads 8 -phred33 {input.forward} {input.reverse} \
-        {output.forward_paired} {params.output_dir}/output_R1_unpaired.fastq {output.reverse_paired} {params.output_dir}/output_R2_unpaired.fastq \
+        {output.forward_paired} {output.forward_unpaired} {output.reverse_paired} {output.reverse_unpaired} \
         HEADCROP:{config[trimmomatic][HEADCROP]} SLIDINGWINDOW:{config[trimmomatic][SLIDINGWINDOW]} MINLEN:{config[trimmomatic][MINLEN]}
         """
 
 rule trimm_quality:
     version: "0.11.2"
     input:
-        "step1_trimmomatic/{sample}_R1_001_trimmed.fastq",
-        "step1_trimmomatic/{sample}_R2_001_trimmed.fastq",
+        all = "step1_trimmomatic/{file_name}.fastq",
+        forward = "step1_trimmomatic/{sample}_R1_001_trimmed.fastq",
+        #reverse = "step1_trimmomatic/{sample}_R2_001_trimmed.fastq",
     output:
-        "step1_trimmomatic/quality/{sample}_R1_001_trimmed_fastqc.html",
-        "step1_trimmomatic/quality/{sample}_R2_001_trimmed_fastqc.html"
+        "step1_trimmomatic/quality/{file_name}_fastqc.html",
     message:
         "\n ===== Running FastQC to check quality of the trimming."
     benchmark:
@@ -102,7 +101,7 @@ rule trimm_quality:
     threads: config["threads"]
     shell:
         """
-        trimm_quality_cmd="fastqc {input} --outdir=step1_trimmomatic/quality" ;\
+        trimm_quality_cmd="fastqc {input.all} --outdir=step1_trimmomatic/quality" ;\
         echo "Executed command:\n" $trimm_quality_cmd ;\
         $trimm_quality_cmd
         """
