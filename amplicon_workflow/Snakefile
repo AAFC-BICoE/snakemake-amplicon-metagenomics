@@ -28,8 +28,17 @@ print(file_names)
 
 rule all:
     input:
-        # trimm quality
-        expand("step1_trimmomatic/quality/{file_name}_trimmed_fastqc.html", file_name=file_names)
+        # convert to fasta
+        expand("step3_convert_to_fasta/{sample}_trimmed_joined.fasta", sample=samples_prefix)
+
+        # join quality - works
+        #expand("step2_join/quality/{sample}_fastqjoin.join_fastqc.html", sample=samples_prefix)
+        
+        # join - works
+        #expand("step2_join/{sample}_fastqjoin.join.fastq", sample=samples_prefix)
+
+        # trimm quality - works
+        #expand("step1_trimmomatic/quality/{file_name}_trimmed_fastqc.html", file_name=file_names)
 
         # trimm - works
         #expand("step1_trimmomatic/{sample}_R1_001_trimmed.fastq", sample=samples_prefix),
@@ -114,11 +123,11 @@ rule join:
     input:
         forward_paired = "step1_trimmomatic/{sample}_R1_001_trimmed.fastq",
         reverse_paired = "step1_trimmomatic/{sample}_R2_001_trimmed.fastq",
-        quality = "step1_trimmomatic/quality/output_R1_paired_fastqc.html"
+        quality = expand("step1_trimmomatic/quality/{file_name}_trimmed_fastqc.html", file_name=file_names)
     output:
-        joined_seqs = "step2_join/{sample}fastqjoin.join.fastq",
-        #unjoined_forward_seqs = "step2_join/fastqjoin.un1.fastq",
-        #unjoined_reverse_seqs = "step2_join/fastqjoin.un2.fastq",
+        joined_seqs = "step2_join/{sample}_fastqjoin.join.fastq",
+        unjoined_forward_seqs = "step2_join/{sample}_fastqjoin.un1.fastq",
+        unjoined_reverse_seqs = "step2_join/{sample}_fastqjoin.un2.fastq",
     message:
         "\n ===== Joining forward and reverse paired-end sequences with Qiime 1.9 join_paired_ends.py script."
     benchmark:
@@ -128,14 +137,17 @@ rule join:
         """
         join_cmd="join_paired_ends.py -f {input.forward_paired} -r {input.reverse_paired} -o step2_join/ -m fastq-join" ;\
         echo "Executed command:\n" $join_cmd ;\
-        $join_cmd
+        $join_cmd ;\
+        mv step2_join/fastqjoin.join.fastq {output.joined_seqs} ;\
+        mv step2_join/fastqjoin.un1.fastq {output.unjoined_forward_seqs} ;\
+        mv step2_join/fastqjoin.un2.fastq {output.unjoined_reverse_seqs} ;\
         """
         #-j 20 -p 2
 
 rule join_quality:
     version: "0.11.2"
     input:
-        "step2_join/{sample}fastqjoin.join.fastq"
+        "step2_join/{sample}_fastqjoin.join.fastq"
     output:
         "step2_join/quality/{sample}_fastqjoin.join_fastqc.html"
     message:
@@ -152,7 +164,7 @@ rule join_quality:
 
 rule convert_fastq_to_fasta:
     input:
-        fastq = "step2_join/{sample}fastqjoin.join.fastq",
+        fastq = "step2_join/{sample}_fastqjoin.join.fastq",
         quality = "step2_join/quality/{sample}_fastqjoin.join_fastqc.html"
     output:
         "step3_convert_to_fasta/{sample}_trimmed_joined.fasta"
