@@ -183,8 +183,13 @@ rule convert_fastq_to_fasta:
     threads: config["threads"]
     shell:
         """
-        awk 'BEGIN{{P=1}}{{if(P==1||P==2){{gsub(/^[@]/,">");print}}; if(P==4)P=0; P++}}' {input.fastq} >> {output}
-        """ 
+        for file in {input.fastq}; do \
+          echo "Converting file $file" ;\
+          sample_id=$(echo $file | rev | cut -d'/' -f1 | rev |cut -d'_' -f1) ;\
+          echo "Sample id: $sample_id"
+          sed -n '1~4s/^@/>'"$sample_id"'_/p;2~4p' "$file" >> {output}; \
+        done
+        """
 
 rule cluster_otus:
     version: "1.9"
