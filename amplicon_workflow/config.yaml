@@ -1,32 +1,37 @@
-#
+#########################################################################
 # This is set up information for the Amplicon Metagenomics Workflow,
 # implemented in Snakemake. Set the parameters below, save the file and 
 # run snakemake.
 # Note that lines beginning with # are comments, i.e. they are ignored.
 #
 # Author: Oksana Korol
-# Date: 16.06.2016
-#
+# Date: 2016.06.16
+#########################################################################
 
 # Name (path) of the directory where snakemake will be executed; i.e. all other
-# directories and files in this workflow will be relative to this directory
+# directories and files in this workflow will be relative to this directory, i.e.
+# output files/directories of the workflow will be contained in this directory.
 # You can change this parameter when initiating workflow execution like this:
 ### snakemake --config workdir="/path/to/some_other_directory"
 workdir: "data"
 
-# Where the initial input to the workflow will be located. Note that this directory
-# is relative to the workdir above (i.e. the path would be <workdir>/<input_files_dir>)
-# input_files_dir: "input_data" - does not work in input
+# Directory where you unput files (raw amplicon data files with fastq or fastq.gz
+# extension)
+initial_input_dir: "input"
 
-# Input files to the workflow
-# Below 2 files are from Qiime tutorial
-#initial_input_forward: "input_ENV0047_S21_R1_001.fastq.gz"
-#initial_input_reverse: "input_ENV0047_S21_R2_001.fastq.gz"
+# Input file extension. Input file types that can be used with this workflow are
+# .fastq or .fastq.gz
+# Specify which of the file extension are you using:
+input_file_extension: ".fastq.gz"
 
-# Below 2 files are fake meta genomes from Jackson. Composition is:
-#  ESL = 600000 Ecoli + 300000 Salmonella + 100000 Listeria reads
-initial_input_forward: "ESL_R1_001.fastq.gz"
-initial_input_reverse: "ESL_R2_001.fastq.gz"
+# Part of the input file name that starts with forward read identifier and ends
+# at the end of the file name. Example: for files:
+##   ENV0001_S1_L001_R1_001.fastq.gz
+##   ENV0001_S1_L001_R2_001.fastq.gz
+##   ENV0002_S4_L001_R1_001.fastq.gz
+##   ENV0002_S4_L001_R2_001.fastq.gz
+# the postfix will be R1_001.fastq.gz
+input_file_forward_postfix: "R1_001.fastq.gz"
 
  
 # Number of threads to be used for execution of every tool in this workflow
