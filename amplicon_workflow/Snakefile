@@ -1,15 +1,15 @@
-""" Oksana Korol, June 15, 2016
+""" Amplicon Metagenomics Workflow for GRDI EcoBiomics project.
 
-Amplicon Metagenomics Workflow for GRDI EcoBiomics project.
-
-Version 0.1
+Version: 0.1
+Author: Oksana Korol
+Date: 2016.06.15
 
 Steps of the workflow:
 
 The firsts rule (rule all:...) specifies the final output of the workflow. 
 The rule righ after it is the first step in the workflow. The rest of the 
-steps (rules) are specified in order of execution. See message:, version:
-and other keyword to gain understanding what each step is doing.
+steps (rules) are specified in order of execution. See message:, version:,
+shell: and other keywords to gain understanding what each step is doing.
 
 """
 
@@ -21,13 +21,24 @@ workdir: config["workdir"]
 
 # Unpack the input files:
 import os
-samples_prefix = {f[:-16] for f in os.listdir("input") if f.endswith("R1_001.fastq.gz")}
-print(samples_prefix)
-file_names = {f[:-9] for f in os.listdir("input") if f.endswith(".fastq.gz")}
-print(file_names)
+
+postfix_length =  len(config["input_file_forward_postfix"])
+samples_prefix = {f[:-16] 
+    for f in os.listdir(config["initial_input_dir"]) 
+    if f.endswith(config["input_file_forward_postfix"])
+    }
+#print(samples_prefix)
+
+extension_length = len(config["input_file_extension"])
+file_names = {f[:-extension_length] 
+    for f in os.listdir(config["initial_input_dir"]) 
+    if f.endswith(config["input_file_extension"])
+    }
+#print(file_names)
+
 
 rule all:
-    input:   
+    input:       
         # Final step
         "step7_otu/otu_table.otu"
 
@@ -41,26 +52,21 @@ rule all:
         #"step3_convert_to_fasta/all_paired_trimmed_seqs_unsorted.fasta"
         #expand("step3_convert_to_fasta/{sample}_trimmed_joined.fasta", sample=samples_prefix)
 
-        # join quality - works
+        # join quality 
         #expand("step2_join/quality/{sample}_fastqjoin.join_fastqc.html", sample=samples_prefix)
         
-        # join - works
+        # join 
         #expand("step2_join/{sample}_fastqjoin.join.fastq", sample=samples_prefix)
 
-        # trimm quality - works
+        # trimm quality 
         #expand("step1_trimmomatic/quality/{file_name}_trimmed_fastqc.html", file_name=file_names)
 
-        # trimm - works
+        # trimm 
         #expand("step1_trimmomatic/{sample}_R1_001_trimmed.fastq", sample=samples_prefix),
         #expand("step1_trimmomatic/{sample}_R2_001_trimmed.fastq", sample=samples_prefix),
         
-        # initial quality - works
+        # initial quality 
         # expand("step0_initial_data_quality/{file_name}_fastqc.html", file_name=file_names),
-        
-        # 
-        #expand("step2_join/quality/{sample}R1_001_fastqjoin.join_fastqc.html", sample=samples_prefix),
-        #expand("step2_join/quality/{sample}R2_001_fastqjoin.join_fastqc.html", sample=samples_prefix),
-        
 
 
 rule initial_data_quality:
@@ -103,7 +109,8 @@ rule trimm:
         """
         java -jar ~/bin/trimmomatic-0.36.jar PE -threads 8 -phred33 {input.forward} {input.reverse} \
         {output.forward_paired} {output.forward_unpaired} {output.reverse_paired} {output.reverse_unpaired} \
-        HEADCROP:{config[trimmomatic][HEADCROP]} SLIDINGWINDOW:{config[trimmomatic][SLIDINGWINDOW]} MINLEN:{config[trimmomatic][MINLEN]}
+        HEADCROP:{config[trimmomatic][HEADCROP]} SLIDINGWINDOW:{config[trimmomatic][SLIDINGWINDOW]} \
+        MINLEN:{config[trimmomatic][MINLEN]}
         """
 
 rule trimm_quality:
@@ -170,14 +177,15 @@ rule join_quality:
         $join_quality_cmd
         """
 
-rule convert_fastq_to_fasta:
+rule convert_fastq_to_fasta_qiime:
     input:
         fastq = expand("step2_join/{sample}_fastqjoin.join.fastq", sample = samples_prefix),
         quality = expand("step2_join/quality/{sample}_fastqjoin.join_fastqc.html", sample = samples_prefix)
     output:
         "step3_convert_to_fasta/all_paired_trimmed_seqs_unsorted.fasta"
     message:
-        "\n ===== Converting fastq files to fasta and combining them in one file."
+        """\n ===== Converting fastq files to fasta, converting sequence names into qiime acceptable \
+format and combining all sequences into one file."""
     benchmark:
         "benchmarks/step3_convert_to_fasta.txt"
     threads: config["threads"]
@@ -228,6 +236,7 @@ rule pick_representatives:
         $pick_representatives_cmd
         """
 
+# TODO: use parallel_assign_taxonomy....
 rule classify:
     version: "1.9"
     input:
@@ -243,8 +252,8 @@ rule classify:
     threads: config["threads"]
     shell:
         """
-        classify_cmd="assign_taxonomy.py -i {input.dataset} -m mothur -r {input.reference_fasta} -t {input.reference_txt} \
-        -c {config[assign_taxonomy][c]} -o step6_classify" ;\
+        classify_cmd="assign_taxonomy.py -i {input.dataset} -m mothur -r {input.reference_fasta} \
+        -t {input.reference_txt} -c {config[assign_taxonomy][c]} -o step6_classify" ;\
         echo "Executed command:\n" $classify_cmd ;\
         $classify_cmd
         """
@@ -257,7 +266,8 @@ rule make_otu:
     output:
         "step7_otu/otu_table.biom"
     message:
-        "\n ===== Make OTU table as a biom file. \n Biom file: the columns correspond to Samples and rows correspond to OTUs and the number of times a sample appears in a particular OTU."
+        """\n ===== Make OTU table as a biom file. \n Biom file: the columns correspond to Samples\
+ and rows correspond to OTUs and the number of times a sample appears in a particular OTU."""
     benchmark:
         "benchmarks/step7_otu_make_otu.txt"
     threads: config["threads"]
