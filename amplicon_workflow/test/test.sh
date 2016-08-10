@@ -9,8 +9,9 @@
 #       test.sh -clean : cleans all test data
 #
 # Quick start: 
-#	1) make sure you back up your data directory
-#	2) > ./test.sh -clean -run
+#	1) make sure you back up your snakemake working directory
+#   2) make sure you have test data in test/data directory
+#	3) > ./test.sh -clean -run
 #
 # Note: 
 #	1) the script assumes a default config.yaml configuration, 
@@ -24,34 +25,53 @@
 
 cd ..
 snakemake_dir=$(pwd)
-#echo $snakemake_dir
+working_dir="$snakemake_dir/data"
+test_data_dir="$snakemake_dir/test/data"
+input_data_dir="$working_dir/input"
+
+# Data from:
+# /isilon/biodiversity/data/raw/illumina/AAFC/150408_M01696_0021_000000000-ADYMN/Data/Intensities/BaseCalls
+input_file1_forward="ENV0001_S1_L001_R1_001.fastq.gz"
+input_file1_reverse="ENV0001_S1_L001_R2_001.fastq.gz"
+input_file2_forward="ENV0002_S4_L001_R1_001.fastq.gz"
+input_file2_reverse="ENV0002_S4_L001_R2_001.fastq.gz"
+input_files_common_prefix="ENV000*"
+
+# Data from:
+#isilon/biodiversity/data/raw/illumina/AAFC/140829_M01696_0013_000000000-AAP8W
+#input_file1_forward="P11-1975_S21_L001_R1_001.fastq.gz"
+#input_file1_reverse="P11-1975_S21_L001_R2_001.fastq.gz"
+#input_file2_forward="P11-1976_S24_L001_R1_001.fastq.gz"
+#input_file2_reverse="P11-1976_S24_L001_R2_001.fastq.gz"
+#input_files_common_prefix="P11-197*"
+
 
 ### Functions
 
 function run_test {
 	echo "Running the test."
 
-	if [ -d "$snakemake_dir/data/input" ] && [ -d $snakemake_dir/data/step0_* ] && 
-		[ -d $snakemake_dir/data/step7_* ] && [ -d $snakemake_dir/data/benchmarks ] ; then
-		echo "ERROR: input directory (data/input) and intermediate execution data directories (data/step*) already exist."
+	if [ -d $input_data_dir ] && [ -d $working_dir/step0_* ] && 
+		[ -d $working_dir/step7_* ] && [ -d $working_dir/benchmarks ] ; then
+		echo "ERROR: input directory ($input_data_dir) and intermediate execution data directories ($working_dir/step*) already exist."
 		echo "       Consider backing them up and then run \"./test.sh -clean\", before executing the test again."
 		exit 1
 	fi
 
 	# Copy test data to data/input directory
-	if [ ! -d "$snakemake_dir/data/input" ] ; then
-		mkdir -p "$snakemake_dir/data/input"
+	if [ ! -d $input_data_dir ] ; then
+		mkdir -p $input_data_dir
 	fi
 
-	if [ ! -e "$snakemake_dir/data/input/ENV0001_S1_L001_R1_001.fastq.gz" ] && [ ! -e "$snakemake_dir/data/input/ENV0001_S1_L001_R2_001.fastq.gz" ] &&
-	    [ ! -e "$snakemake_dir/data/input/ENV0002_S4_L001_R1_001.fastq.gz" ] && [ ! -e "$snakemake_dir/data/input/ENV0002_S4_L001_R2_001.fastq.gz" ] ; then
-		cp test/data/ENV000* data/input/
+	if [ ! -e $input_data_dir/$input_file1_forward ] && [ ! -e $input_data_dir/$input_file1_reverse ] &&
+	    [ ! -e $input_data_dir/$input_file2_forward ] && [ ! -e $input_data_dir/$input_file2_reverse ] ; then
+		cp $test_data_dir/$input_files_common_prefix $input_data_dir
 	else
-		echo "INFO: Input files already exist (data/input/ENV000...). Proceeding with the test."
+		echo "INFO: Input files already exist ($input_data_dir/$input_files_common_prefix). Proceeding with the test."
 	fi
 
 	# Copy reference data to data directory
-	cp $snakemake_dir/test/data/unite.* $snakemake_dir/data/
+	cp $test_data_dir/unite.* $working_dir
 
 
 	# Run snakemake in trial mode
@@ -67,45 +87,47 @@ function run_test {
 		exit 2
 	fi
 
-	#echo "Snakemake -npr output is" $snakemake_npr_output
 
 	# Run snakemake
-	snakemake_output=$(snakemake)
-	echo "**************** Snakemake output *****************"
-	echo $snakemake_output
-	echo "*********************************"
+	snakemake > $working_dir/snakemake.out
+	
 	# Check the output for successfull execution
-	if [[ $snakemake_output == *"21 of 21 steps (100%) done"* ]] ; then
-		echo "All 21 steps of the workflow were executed successfully."
-	else
-		echo "ERROR: Not all 21 steps of the workflow were executed. See $snakemake_dir/data for intermediate data results."
-		exit 2
-	fi
+	#grep_out=$(grep "(100%) done" $working_dir/snakemake.out)
+	#if [[ -z $grep_out ]] ; then
+	#	echo "ERROR: Not everything in the workflow was executed successfully. See $working_dir for intermediate data results."
+	#	#exit 2
+	#fi
 	
 
 	# Check intermediate data directories exist:
 	expected_dir_list=( "benchmarks" "step0_initial_data_quality" "step1_trimmomatic" "step2_join" "step3_convert_to_fasta" "step4_pick_otu" "step5_pick_representatives" "step6_classify" "step7_otu")
 
 	for (( i=0;i<${#expected_dir_list[@]};i++)); do
-		#echo "*** dir is $snakemake_dir/data/${expected_dir_list[${i}]}"
-		echo "*** dir is ${i}"
-		if [ ! -d "$snakemake_dir/data/${expected_dir_list[${i}]}" ] ; then
-			echo "ERROR: Expecting $snakemake_dir/data/${expected_dir_list[${i}]} directory, but did not locate it."
+		if [ ! -d "$working_dir/${expected_dir_list[${i}]}" ] ; then
+			echo "ERROR: Expecting $working_dir/${expected_dir_list[${i}]} directory, but did not locate it."
+			exit 2
 		fi
-		exit 2
 	done
 
+	# Check if OTU table was created
+	if [[ ! -e $working_dir/step7_otu/otu_table.otu ]]; then
+		echo "ERROR: OTU table $working_dir/step7_otu/otu_table.otu could not be located."
+		exit 2
+	fi
+
 	# Compare resulting OTU table
-	diff_result=$(diff $snakemake_dir/data/step7_otu/otu_table.otu $snakemake_dir/test/data/expected_otu_table.otu )
-	if [[ ! -z "${diff_result// }" ]] ; then
+	diff_result=$(diff $working_dir/step7_otu/otu_table.otu $test_data_dir/expected_otu_table.otu )
+	if [[ ! -z $diff_result ]] ; then
 		echo "ERROR: otu_table.otu did not match expected."
 		exit 2
 	fi
+
+	echo "SUCCESS: Test executed successfully. See $working_dir for workflow execution results."
 }
 
-function clean_test_data {
-	echo "Removing test data."
-	rm -r $snakemake_dir/data/
+function remove_working_dir {
+	echo "Removing Snakemake working directory."
+	rm -r $working_dir
 }
 
 
@@ -122,7 +144,7 @@ for i in "$@"
 do
 	case $i in
 		"-run" ) run_test ;;
-		"-clean" ) clean_test_data ;;
+		"-clean" ) remove_working_dir ;;
 		* ) echo "ERROR: Unknown argument. Run \"./test.sh\" with no arguments to see the script usage. "
 	esac
 done
