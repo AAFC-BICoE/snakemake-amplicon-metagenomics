@@ -290,7 +290,7 @@ rule convert_otu_table:
     threads: config["threads"]
     shell:
         """
-        convert_otu_table_cmd="biom convert -i {input} -o {output} --to-tsv" ;\
+        convert_otu_table_cmd="biom convert -i {input} -o {output} --to-tsv --header-key taxonomy" ;\
         echo "Executed command:\n" $convert_otu_table_cmd ;\
         $convert_otu_table_cmd
         """
