@@ -236,7 +236,6 @@ rule pick_representatives:
         $pick_representatives_cmd
         """
 
-# TODO: use parallel_assign_taxonomy....
 rule classify:
     version: "1.9"
     input:
@@ -257,7 +256,16 @@ rule classify:
         echo "Executed command:\n" $classify_cmd ;\
         $classify_cmd
         """
-
+    ## Below is the alternative way to classify sequences with parallel RDP classifier from Qiime.
+    ## Note that Qiime needs to be set up to be able to handle parallelization properly
+    #shell:
+    #    """
+    #    classify_cmd="parallel_assign_taxonomy_rdp.py -i {input.dataset} -o step6_classify \
+    #    -r {input.reference_fasta} -t {input.reference_txt} -c {config[assign_taxonomy][c]}" ;\
+    #    echo "Executed command:\n" $classify_cmd ;\
+    #    $classify_cmd
+    #    """
+        
 rule make_otu:
     version: "1.9"
     input: 
