@@ -136,7 +136,8 @@ function remove_working_dir {
 if [ "$#" -eq 0 ]; then
 	echo "Usage: "
 	echo "    -run   : run the test;"
-	echo "    -clean : clean test data"
+	echo "    -clean : clean workflow data. NOTE: this removed workflow working directory (i.e. data directory)."
+	echo "             So if you have data there that you would like to keep - back it up!"
 	exit 0
 fi
 

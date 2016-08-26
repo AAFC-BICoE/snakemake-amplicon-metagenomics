@@ -1,14 +1,14 @@
 # Amplicon Metagenomic Workflow
 
 ## Synopsis
-This workflow describes a series of steps executed to get from raw fastq files, resulting from the amplicon sequencing of a sample, to OTU table, describing the taxonomic determination summary for the analysed sample. It executes on Linux command line, using a Snakemake workflow management system. 
+This workflow describes a series of steps executed to get from raw fastq files, resulting from the amplicon sequencing of sample(s), to OTU table, describing the taxonomic determination summary for the analysed sample(s). It executes on Linux command line, using a Snakemake workflow management system. 
 
 
 ## Setup
 
-Make sure you're in the directory where the Snakefile is.
+Make sure you're in the directory where the _Snakefile_ is.
 
-1. Create a data/input/ directory off of where the Snakemake file is:
+1. Create a _data/input/_ directory off of where the _Snakemake_ file is:
     
         $ cd <path_to>/snakemake-workflows/amplicon_workflow/
         $ mkdir -p data/input
@@ -39,6 +39,21 @@ This worflow runs on Linux. To install this workflow, either locally or on a clu
 * FastQC 0.11.2
 * Trimomatic 0.36
 * Qiime 1.9
+
+Check out this project (requires git):
+
+    $ git clone https://github.com/AAFC-MBB/snakemake-workflows.git
+OR
+
+Copy _Snakefile_ and _config.yaml_ files to where you would like to store the workflow and its results.
+
+## Tests
+
+Automated test is located in _snakemake-workflows/amplicon_workflow/test/_. To run the test, first download the test data to _snakemake-workflows/amplicon_workflow/test/data/_ directory (see README in that directory for the instructions). Before you execute the test please note, that the test runs _Snakefile_ with the test data and therefore uses the same output directory as a regular _snakemake_ command (default is _snakemake-workflows/amplicon_workflow/data_). Therefore if you already have some input or intermetiate workflow execution data in your _data_ directory and you would like to keep it - back it up. 
+
+Execute the tests:
+
+    $ ./test.sh -clean -run
 
 ## Info
 
