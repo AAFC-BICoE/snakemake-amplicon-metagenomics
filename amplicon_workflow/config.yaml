@@ -32,7 +32,7 @@ input_file_extension: ".fastq.gz"
 ##   ENV0002_S4_L001_R2_001.fastq.gz
 # the postfix will be R1_001.fastq.gz
 input_file_forward_postfix: "R1_001.fastq.gz"
-
+input_file_reverse_postfix: "R2_001.fastq.gz"
  
 # Number of threads to be used for execution of every tool in this workflow
 threads: 1
