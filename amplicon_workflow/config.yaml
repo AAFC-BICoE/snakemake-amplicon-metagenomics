@@ -13,11 +13,18 @@
 # output files/directories of the workflow will be contained in this directory.
 # You can change this parameter when initiating workflow execution like this:
 ### snakemake --config workdir="/path/to/some_other_directory"
-workdir: "data"
+workdir: "/home/lowec/Documents/testDir"
 
 # Directory where you unput files (raw amplicon data files with fastq or fastq.gz
 # extension)
-initial_input_dir: "input"
+#initial_input_dir: "input"
+initial_input_dir: "/home/lowec/Documents/TestNewInput"
+# Path to reference fasta and taxonomy files
+reference_fasta: "unite.fasta"
+reference_taxonomy: "unite.txt"
+
+#Path to trimmommatic java application
+trimmommatic: "~/bin/trimmomatic-0.36.jar"
 
 # Input file extension. Input file types that can be used with this workflow are
 # .fastq or .fastq.gz

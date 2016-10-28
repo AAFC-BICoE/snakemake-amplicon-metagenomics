@@ -21,6 +21,16 @@ workdir: config["workdir"]
 
 # Unpack the input files:
 import os
+import os.path
+from os.path import join
+
+
+#dynamically set input directory
+INPUTDIR = config["initial_input_dir"]
+if not os.path.isabs(config["initial_input_dir"]):
+    INPUTDIR=join(config["workdir"],config["initial_input_dir"])
+    if not os.path.isabs(config["workdir"]):
+        INPUTDIR=join(os.getcwd(),config["initial_input_dir"])
 
 postfix_length =  len(config["input_file_forward_postfix"])
 samples_prefix = {f[:-16] 
@@ -36,7 +46,10 @@ file_names = {f[:-extension_length]
     }
 #print(file_names)
 
-
+#Patterns for input files 
+PATTERN_INITIAL = '{file_name}.fastq.gz'
+PATTERN_TRIM1 = '{sample}_R1_001.fastq.gz'
+PATTERN_TRIM2= '{sample}_R2_001.fastq.gz'
 rule all:
     input:       
         # Final step
@@ -72,7 +85,7 @@ rule all:
 rule initial_data_quality:
     version: "0.11.2"
     input:
-        "input/{file_name}.fastq.gz",
+        join(INPUTDIR, PATTERN_INITIAL),
     output:
         "step0_initial_data_quality/{file_name}_fastqc.html",
     message:
@@ -90,8 +103,8 @@ rule initial_data_quality:
 rule trimm:
     version: "0.36"
     input:
-        forward = "input/{sample}_R1_001.fastq.gz",
-        reverse = "input/{sample}_R2_001.fastq.gz",
+        forward = join(INPUTDIR,PATTERN_TRIM1),
+        reverse = join(INPUTDIR, PATTERN_TRIM2),
         quality = expand("step0_initial_data_quality/{file_name}_fastqc.html", file_name=file_names),
     output:
         forward_paired = "step1_trimmomatic/{sample}_R1_001_trimmed.fastq",
