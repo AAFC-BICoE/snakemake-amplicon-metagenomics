@@ -13,12 +13,11 @@
 # output files/directories of the workflow will be contained in this directory.
 # You can change this parameter when initiating workflow execution like this:
 ### snakemake --config workdir="/path/to/some_other_directory"
-workdir: "/home/lowec/Documents/testDir"
+workdir: "data"
 
 # Directory where you unput files (raw amplicon data files with fastq or fastq.gz
 # extension)
-#initial_input_dir: "input"
-initial_input_dir: "/home/lowec/Documents/TestNewInput"
+initial_input_dir: "input"
 # Path to reference fasta and taxonomy files
 reference_fasta: "unite.fasta"
 reference_taxonomy: "unite.txt"
