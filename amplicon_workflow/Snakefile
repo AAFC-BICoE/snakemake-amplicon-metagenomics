@@ -24,7 +24,6 @@ import os
 import os.path
 from os.path import join
 
-
 #dynamically set input directory
 INPUTDIR = config["initial_input_dir"]
 if not os.path.isabs(config["initial_input_dir"]):
@@ -33,23 +32,25 @@ if not os.path.isabs(config["initial_input_dir"]):
         INPUTDIR=join(os.getcwd(),config["initial_input_dir"])
 
 postfix_length =  len(config["input_file_forward_postfix"])
-samples_prefix = {f[:-16] 
+samples_prefix = {f[:-postfix_length] 
     for f in os.listdir(config["initial_input_dir"]) 
     if f.endswith(config["input_file_forward_postfix"])
     }
-#print(samples_prefix)
+print(samples_prefix)
 
 extension_length = len(config["input_file_extension"])
 file_names = {f[:-extension_length] 
     for f in os.listdir(config["initial_input_dir"]) 
     if f.endswith(config["input_file_extension"])
     }
-#print(file_names)
 
 #Patterns for input files 
-PATTERN_INITIAL = '{file_name}.fastq.gz'
-PATTERN_TRIM1 = '{sample}_R1_001.fastq.gz'
-PATTERN_TRIM2= '{sample}_R2_001.fastq.gz'
+PATTERN_INITIAL = '{file_name}' + config["input_file_extension"]
+PATTERN_TRIM1 = '{sample}' + config["input_file_forward_postfix"]
+PATTERN_TRIM2= '{sample}' + config["input_file_reverse_postfix"]
+
+print(PATTERN_INITIAL + " " + PATTERN_TRIM1 + " " + PATTERN_TRIM2)
+
 rule all:
     input:       
         # Final step
@@ -129,11 +130,11 @@ rule trimm:
 rule trimm_quality:
     version: "0.11.2"
     input:
-        all = "step1_trimmomatic/{file_name}_trimmed.fastq",
         forward = expand("step1_trimmomatic/{sample}_R1_001_trimmed.fastq", sample = samples_prefix) ,
-        #reverse = "step1_trimmomatic/{sample}_R2_001_trimmed.fastq",
+        reverse = expand("step1_trimmomatic/{sample}_R2_001_trimmed.fastq", sample = samples_prefix),
     output:
-        "step1_trimmomatic/quality/{file_name}_trimmed_fastqc.html",
+        forward = "step1_trimmomatic/quality/{sample}_R1_001_trimmed_fastqc.html",
+	reverse = "step1_trimmomatic/quality/{sample}_R2_001_trimmed_fastqc.html",
     message:
         "\n ===== Running FastQC to check quality of the trimming."
     benchmark:
@@ -141,7 +142,10 @@ rule trimm_quality:
     threads: config["threads"]
     shell:
         """
-        trimm_quality_cmd="fastqc {input.all} --outdir=step1_trimmomatic/quality" ;\
+        trimm_quality_cmd="fastqc {input.forward} --outdir=step1_trimmomatic/quality" ;\
+        echo "Executed command:\n" $trimm_quality_cmd ;\
+        $trimm_quality_cmd
+        trimm_quality_cmd="fastqc {input.reverse} --outdir=step1_trimmomatic/quality" ;\
         echo "Executed command:\n" $trimm_quality_cmd ;\
         $trimm_quality_cmd
         """
@@ -151,7 +155,8 @@ rule join:
     input:
         forward_paired = "step1_trimmomatic/{sample}_R1_001_trimmed.fastq",
         reverse_paired = "step1_trimmomatic/{sample}_R2_001_trimmed.fastq",
-        quality = expand("step1_trimmomatic/quality/{file_name}_trimmed_fastqc.html", file_name=file_names)
+        quality_forward = "step1_trimmomatic/quality/{sample}_R1_001_trimmed_fastqc.html",
+        quality_reverse = "step1_trimmomatic/quality/{sample}_R2_001_trimmed_fastqc.html"
     output:
         joined_seqs = "step2_join/{sample}_fastqjoin.join.fastq",
         unjoined_forward_seqs = "step2_join/{sample}_fastqjoin.un1.fastq",
