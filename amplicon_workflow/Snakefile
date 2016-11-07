@@ -36,7 +36,6 @@ samples_prefix = {f[:-postfix_length]
     for f in os.listdir(config["initial_input_dir"]) 
     if f.endswith(config["input_file_forward_postfix"])
     }
-print(samples_prefix)
 
 extension_length = len(config["input_file_extension"])
 file_names = {f[:-extension_length] 
@@ -48,8 +47,6 @@ file_names = {f[:-extension_length]
 PATTERN_INITIAL = '{file_name}' + config["input_file_extension"]
 PATTERN_TRIM1 = '{sample}' + config["input_file_forward_postfix"]
 PATTERN_TRIM2= '{sample}' + config["input_file_reverse_postfix"]
-
-print(PATTERN_INITIAL + " " + PATTERN_TRIM1 + " " + PATTERN_TRIM2)
 
 rule all:
     input:       
@@ -104,6 +101,7 @@ rule initial_data_quality:
 rule trimm:
     version: "0.36"
     input:
+        exec = os.path.expanduser(config["trimmomatic"]["path"]),
         forward = join(INPUTDIR,PATTERN_TRIM1),
         reverse = join(INPUTDIR, PATTERN_TRIM2),
         quality = expand("step0_initial_data_quality/{file_name}_fastqc.html", file_name=file_names),
@@ -112,8 +110,6 @@ rule trimm:
         reverse_paired = "step1_trimmomatic/{sample}_R2_001_trimmed.fastq",
         forward_unpaired = "step1_trimmomatic/{sample}_R1_unpaired.fastq",
         reverse_unpaired = "step1_trimmomatic/{sample}_R2_unpaired.fastq",
-    params:
-        #output_dir = "step1_trimmomatic"
     message:
         "\n ===== Trimming input sequences with Trimomatic 0.36"
     benchmark:
@@ -121,7 +117,7 @@ rule trimm:
     threads: config["threads"]
     shell:
         """
-        java -jar ~/bin/trimmomatic-0.36.jar PE -threads 8 -phred33 {input.forward} {input.reverse} \
+        java -jar {input.exec} PE -threads {threads} -phred33 {input.forward} {input.reverse} \
         {output.forward_paired} {output.forward_unpaired} {output.reverse_paired} {output.reverse_unpaired} \
         HEADCROP:{config[trimmomatic][HEADCROP]} SLIDINGWINDOW:{config[trimmomatic][SLIDINGWINDOW]} \
         MINLEN:{config[trimmomatic][MINLEN]}
