@@ -254,8 +254,8 @@ rule classify:
     version: "1.9"
     input:
         dataset = "step5_pick_representatives/representative_seqs_set.fasta",
-        reference_fasta = "unite.fasta",
-        reference_txt = "unite.txt"
+        reference_fasta = config["reference_fasta"],
+        reference_txt = config["reference_taxonomy"]
     output:
         "step6_classify/representative_seqs_set_tax_assignments.txt"
     message:
