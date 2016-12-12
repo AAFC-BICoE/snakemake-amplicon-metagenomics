@@ -1,4 +1,4 @@
-#########################################################################
+########################################################################
 # This is set up information for the Amplicon Metagenomics Workflow,
 # implemented in Snakemake. Set the parameters below, save the file and 
 # run snakemake.
@@ -22,9 +22,6 @@ initial_input_dir: "input"
 reference_fasta: "unite.fasta"
 reference_taxonomy: "unite.txt"
 
-#Path to trimmommatic java application
-trimmommatic: "~/bin/trimmomatic-0.36.jar"
-
 # Input file extension. Input file types that can be used with this workflow are
 # .fastq or .fastq.gz
 # Specify which of the file extension are you using:
@@ -37,14 +34,15 @@ input_file_extension: ".fastq.gz"
 ##   ENV0002_S4_L001_R1_001.fastq.gz
 ##   ENV0002_S4_L001_R2_001.fastq.gz
 # the postfix will be R1_001.fastq.gz
-input_file_forward_postfix: "R1_001.fastq.gz"
-input_file_reverse_postfix: "R2_001.fastq.gz"
+input_file_forward_postfix: "_R1_001.fastq.gz"
+input_file_reverse_postfix: "_R2_001.fastq.gz"
  
 # Number of threads to be used for execution of every tool in this workflow
 threads: 1
 
 # Trimmomatic parameters
 trimmomatic:
+    path: "/home/lowec/TEST/bin/Trimmomatic-0.36/trimmomatic-0.36.jar"
     HEADCROP: "15" 
     SLIDINGWINDOW: "4:20" 
     MINLEN: "36"
