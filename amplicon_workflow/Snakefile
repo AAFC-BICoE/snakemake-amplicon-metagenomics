@@ -245,7 +245,7 @@ rule pick_representatives:
     threads: config["threads"]
     shell:
         """
-        pick_representatives_cmd="pick_rep_set.py -i {input.otu} -f {input.fasta} -o {output}" ;\
+        pick_representatives_cmd="pick_rep_set.py -i {input.otu} -f {input.fasta} -m longest -o {output}" ;\
         echo "Executed command:\n" $pick_representatives_cmd ;\
         $pick_representatives_cmd
         """
