@@ -13,7 +13,7 @@ shell: and other keywords to gain understanding what each step is doing.
 
 """
 
-configfile: "config.yaml"
+#configfile: "config.yaml"
 
 # Workdir can be changed when executing workflow:
 # snakemake --config workdir="data/amplicon_workflow/"
