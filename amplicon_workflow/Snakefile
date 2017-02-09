@@ -13,7 +13,7 @@ shell: and other keywords to gain understanding what each step is doing.
 
 """
 
-configfile: "config.yaml"
+#configfile: "config.yaml"
 
 # Workdir can be changed when executing workflow:
 # snakemake --config workdir="data/amplicon_workflow/"
@@ -21,21 +21,32 @@ workdir: config["workdir"]
 
 # Unpack the input files:
 import os
+import os.path
+from os.path import join
+
+#dynamically set input directory
+INPUTDIR = config["initial_input_dir"]
+if not os.path.isabs(config["initial_input_dir"]):
+    INPUTDIR=join(config["workdir"],config["initial_input_dir"])
+    if not os.path.isabs(config["workdir"]):
+        INPUTDIR=join(os.getcwd(),config["initial_input_dir"])
 
 postfix_length =  len(config["input_file_forward_postfix"])
-samples_prefix = {f[:-16] 
+samples_prefix = {f[:-postfix_length] 
     for f in os.listdir(config["initial_input_dir"]) 
     if f.endswith(config["input_file_forward_postfix"])
     }
-#print(samples_prefix)
 
 extension_length = len(config["input_file_extension"])
 file_names = {f[:-extension_length] 
     for f in os.listdir(config["initial_input_dir"]) 
     if f.endswith(config["input_file_extension"])
     }
-#print(file_names)
 
+#Patterns for input files 
+PATTERN_INITIAL = '{file_name}' + config["input_file_extension"]
+PATTERN_TRIM1 = '{sample}' + config["input_file_forward_postfix"]
+PATTERN_TRIM2= '{sample}' + config["input_file_reverse_postfix"]
 
 rule all:
     input:       
@@ -72,14 +83,13 @@ rule all:
 rule initial_data_quality:
     version: "0.11.2"
     input:
-        "input/{file_name}.fastq.gz",
+        join(INPUTDIR, PATTERN_INITIAL),
     output:
         "step0_initial_data_quality/{file_name}_fastqc.html",
     message:
         "\n ===== Running FastQC to determine the quality of the initial input data."
     benchmark:
         "benchmarks/step0_initial_data_quality.txt"
-    threads: config["threads"]
     shell:
         """
         initial_data_quality_cmd="fastqc {input} --outdir=step0_initial_data_quality" ;\
@@ -90,16 +100,15 @@ rule initial_data_quality:
 rule trimm:
     version: "0.36"
     input:
-        forward = "input/{sample}_R1_001.fastq.gz",
-        reverse = "input/{sample}_R2_001.fastq.gz",
+        exec = os.path.expanduser(config["trimmomatic"]["path"]),
+        forward = join(INPUTDIR,PATTERN_TRIM1),
+        reverse = join(INPUTDIR, PATTERN_TRIM2),
         quality = expand("step0_initial_data_quality/{file_name}_fastqc.html", file_name=file_names),
     output:
         forward_paired = "step1_trimmomatic/{sample}_R1_001_trimmed.fastq",
         reverse_paired = "step1_trimmomatic/{sample}_R2_001_trimmed.fastq",
         forward_unpaired = "step1_trimmomatic/{sample}_R1_unpaired.fastq",
         reverse_unpaired = "step1_trimmomatic/{sample}_R2_unpaired.fastq",
-    params:
-        #output_dir = "step1_trimmomatic"
     message:
         "\n ===== Trimming input sequences with Trimomatic 0.36"
     benchmark:
@@ -107,7 +116,7 @@ rule trimm:
     threads: config["threads"]
     shell:
         """
-        java -jar ~/bin/trimmomatic-0.36.jar PE -threads 8 -phred33 {input.forward} {input.reverse} \
+        java -jar {input.exec} PE -threads {threads} -phred33 {input.forward} {input.reverse} \
         {output.forward_paired} {output.forward_unpaired} {output.reverse_paired} {output.reverse_unpaired} \
         HEADCROP:{config[trimmomatic][HEADCROP]} SLIDINGWINDOW:{config[trimmomatic][SLIDINGWINDOW]} \
         MINLEN:{config[trimmomatic][MINLEN]}
@@ -116,19 +125,21 @@ rule trimm:
 rule trimm_quality:
     version: "0.11.2"
     input:
-        all = "step1_trimmomatic/{file_name}_trimmed.fastq",
         forward = expand("step1_trimmomatic/{sample}_R1_001_trimmed.fastq", sample = samples_prefix) ,
-        #reverse = "step1_trimmomatic/{sample}_R2_001_trimmed.fastq",
+        reverse = expand("step1_trimmomatic/{sample}_R2_001_trimmed.fastq", sample = samples_prefix),
     output:
-        "step1_trimmomatic/quality/{file_name}_trimmed_fastqc.html",
+        forward = "step1_trimmomatic/quality/{sample}_R1_001_trimmed_fastqc.html",
+	reverse = "step1_trimmomatic/quality/{sample}_R2_001_trimmed_fastqc.html",
     message:
         "\n ===== Running FastQC to check quality of the trimming."
     benchmark:
         "benchmarks/step1_trimmomatic_quality.txt"
-    threads: config["threads"]
     shell:
         """
-        trimm_quality_cmd="fastqc {input.all} --outdir=step1_trimmomatic/quality" ;\
+        trimm_quality_cmd="fastqc {input.forward} --outdir=step1_trimmomatic/quality" ;\
+        echo "Executed command:\n" $trimm_quality_cmd ;\
+        $trimm_quality_cmd
+        trimm_quality_cmd="fastqc {input.reverse} --outdir=step1_trimmomatic/quality" ;\
         echo "Executed command:\n" $trimm_quality_cmd ;\
         $trimm_quality_cmd
         """
@@ -138,7 +149,8 @@ rule join:
     input:
         forward_paired = "step1_trimmomatic/{sample}_R1_001_trimmed.fastq",
         reverse_paired = "step1_trimmomatic/{sample}_R2_001_trimmed.fastq",
-        quality = expand("step1_trimmomatic/quality/{file_name}_trimmed_fastqc.html", file_name=file_names)
+        quality_forward = "step1_trimmomatic/quality/{sample}_R1_001_trimmed_fastqc.html",
+        quality_reverse = "step1_trimmomatic/quality/{sample}_R2_001_trimmed_fastqc.html"
     output:
         joined_seqs = "step2_join/{sample}_fastqjoin.join.fastq",
         unjoined_forward_seqs = "step2_join/{sample}_fastqjoin.un1.fastq",
@@ -147,7 +159,7 @@ rule join:
         "\n ===== Joining forward and reverse paired-end sequences with Qiime 1.9 join_paired_ends.py script."
     benchmark:
         "benchmarks/step2_join.txt"
-    threads: config["threads"]
+    threads: 99
     shell:
         """
         join_cmd="join_paired_ends.py -f {input.forward_paired} -r {input.reverse_paired} -o step2_join/ -m fastq-join" ;\
@@ -169,7 +181,7 @@ rule join_quality:
         "Running FastQC to check quality of the join."
     benchmark:
         "benchmarks/step2_join_quality.txt"
-    threads: config["threads"]
+    threads: 99
     shell:
         """
         join_quality_cmd="fastqc {input} --outdir=step2_join/quality" ;\
@@ -188,7 +200,6 @@ rule convert_fastq_to_fasta_qiime:
 format and combining all sequences into one file."""
     benchmark:
         "benchmarks/step3_convert_to_fasta.txt"
-    threads: config["threads"]
     shell:
         """
         for file in {input.fastq}; do \
@@ -209,7 +220,6 @@ rule cluster_otus:
         "\n ===== Cluster sequences into OTUs (Operational Taxonomic Units)"
     benchmark:
         "benchmarks/step4_pick_otu.txt"
-    threads: config["threads"]
     shell:
         """
         cluster_otus_cmd="pick_otus.py -i {input} -m uclust -s {config[pick_otus][s]} -o step4_pick_otu" ;\
@@ -228,10 +238,9 @@ rule pick_representatives:
         "\n ===== Pick a representative sequence for each OTU."
     benchmark:
         "benchmarks/step5_pick_representatives.txt"
-    threads: config["threads"]
     shell:
         """
-        pick_representatives_cmd="pick_rep_set.py -i {input.otu} -f {input.fasta} -o {output}" ;\
+        pick_representatives_cmd="pick_rep_set.py -i {input.otu} -f {input.fasta} -m longest -o {output}" ;\
         echo "Executed command:\n" $pick_representatives_cmd ;\
         $pick_representatives_cmd
         """
@@ -240,15 +249,14 @@ rule classify:
     version: "1.9"
     input:
         dataset = "step5_pick_representatives/representative_seqs_set.fasta",
-        reference_fasta = "unite.fasta",
-        reference_txt = "unite.txt"
+        reference_fasta = config["reference_fasta"],
+        reference_txt = config["reference_taxonomy"]
     output:
         "step6_classify/representative_seqs_set_tax_assignments.txt"
     message:
         "\n ===== Classify (i.e. assign taxonomy) to representative sequences."
     benchmark:
         "benchmarks/step6_classify.txt"
-    threads: config["threads"]
     shell:
         """
         classify_cmd="assign_taxonomy.py -i {input.dataset} -m mothur -r {input.reference_fasta} \
@@ -278,7 +286,6 @@ rule make_otu:
  and rows correspond to OTUs and the number of times a sample appears in a particular OTU."""
     benchmark:
         "benchmarks/step7_otu_make_otu.txt"
-    threads: config["threads"]
     shell:
         """
         make_otu_cmd="make_otu_table.py -i {input.otu} -t {input.assigned_taxonomy} -o {output}" ;\
@@ -295,7 +302,6 @@ rule convert_otu_table:
         "\n ===== Convert OTU table in biom format to tab-delimited table format. "
     benchmark:
         "benchmarks/step7_otu_convert_otu.txt"
-    threads: config["threads"]
     shell:
         """
         convert_otu_table_cmd="biom convert -i {input} -o {output} --to-tsv --header-key taxonomy" ;\
