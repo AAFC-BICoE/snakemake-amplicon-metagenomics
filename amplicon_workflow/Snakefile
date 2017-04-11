@@ -120,10 +120,18 @@ rule trimm:
     threads: config["threads"]
     shell:
         """
+        touch null.fa
         java -jar {input.exec} PE -threads {threads} -phred33 {input.forward} {input.reverse} \
         {output.forward_paired} {output.forward_unpaired} {output.reverse_paired} {output.reverse_unpaired} \
-        HEADCROP:{config[trimmomatic][HEADCROP]} SLIDINGWINDOW:{config[trimmomatic][SLIDINGWINDOW]} \
-        MINLEN:{config[trimmomatic][MINLEN]}
+        ILLUMINACLIP:{config[trimmomatic][ILLUMINACLIP]} \
+        HEADCROP:{config[trimmomatic][HEADCROP]} \
+        LEADING:{config[trimmomatic][LEADING]} \
+        SLIDINGWINDOW:{config[trimmomatic][SLIDINGWINDOW]} \
+        TRAILING:{config[trimmomatic][TRAILING]} \
+        AVGQUAL:{config[trimmomatic][AVGQUAL]} \
+        MINLEN:{config[trimmomatic][MINLEN]} \
+        CROP:{config[trimmomatic][CROP]}
+        rm null.fa
         """
 
 rule trimm_quality:
@@ -261,10 +269,9 @@ rule check_chimeric_sequences:
         "\n ===== Check for chimeras and remove chimeric clusters."
     benchmark:
         "benchmarks/step6_check_chimeric_sequences.txt"
-    threads: config["threads"]
     shell:
         """
-        check_chimeric_seqs_cmd="parallel_identify_chimeric_seqs.py -i {input.dataset} -t {input.reference_txt} -r {input.reference_fasta} -m blast_fragments -o {output.chimeric_list} -O {threads}" ;\
+        check_chimeric_seqs_cmd="parallel_identify_chimeric_seqs.py -i {input.dataset} -t {input.reference_txt} -r {input.reference_fasta} -m blast_fragments -o {output.chimeric_list} -O {config[threads]}" ;\
         echo "Executed command:\n" $check_chimeric_seqs_cmd ;\
         $check_chimeric_seqs_cmd
         remove_chimeric_seqs_cmd="filter_fasta.py -f {input.dataset} -o {output.rep_set} -s {output.chimeric_list} -n" ;\
@@ -284,11 +291,10 @@ rule classify:
         "\n ===== Classify (i.e. assign taxonomy) to representative sequences."
     benchmark:
         "benchmarks/step7_classify.txt"
-    threads: config["threads"]
     shell:
        """
        classify_cmd="parallel_assign_taxonomy_rdp.py -i {input.dataset} -o step7_classify \
-       -r {input.reference_fasta} -t {input.reference_txt} --rdp_max_memory 10000 -c {config[assign_taxonomy][c]} -O {threads}" ;\
+       -r {input.reference_fasta} -t {input.reference_txt} --rdp_max_memory 10000 -c {config[assign_taxonomy][c]} -O {config[threads]}" ;\
        echo "Executed command:\n" $classify_cmd ;\
        $classify_cmd
        """
