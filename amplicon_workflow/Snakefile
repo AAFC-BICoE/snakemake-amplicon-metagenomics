@@ -1,8 +1,8 @@
 """ Amplicon Metagenomics Workflow for GRDI EcoBiomics project.
 
-Version: 0.1
-Author: Oksana Korol
-Date: 2016.06.15
+Version: 0.3
+Author: Christine Lowe and Oksana Korol
+Date: 2017.04.18
 
 Steps of the workflow:
 
@@ -12,8 +12,6 @@ steps (rules) are specified in order of execution. See message:, version:,
 shell: and other keywords to gain understanding what each step is doing.
 
 """
-
-#configfile: "config.yaml"
 
 # Workdir can be changed when executing workflow:
 # snakemake --config workdir="data/amplicon_workflow/"
@@ -48,10 +46,16 @@ PATTERN_INITIAL = '{file_name}' + config["input_file_extension"]
 PATTERN_TRIM1 = '{sample}' + config["input_file_forward_postfix"]
 PATTERN_TRIM2= '{sample}' + config["input_file_reverse_postfix"]
 
+if not os.path.isabs(config["reference_fasta"]):
+    if not os.path.isabs(config["workdir"]):
+        config["reference_fasta"]=join(os.getcwd(),config["reference_fasta"])
+    else:
+        config["reference_fasta"]=join(config["workdir"],config["reference_fasta"])
+
 rule all:
     input:       
         # Final step
-        "step7_otu/otu_table.otu"
+        "step8_otu/otu_table.otu"
 
         # representative
         #"step5_pick_representatives/representative_seqs_set.fasta"
@@ -116,10 +120,18 @@ rule trimm:
     threads: config["threads"]
     shell:
         """
+        touch null.fa
         java -jar {input.exec} PE -threads {threads} -phred33 {input.forward} {input.reverse} \
         {output.forward_paired} {output.forward_unpaired} {output.reverse_paired} {output.reverse_unpaired} \
-        HEADCROP:{config[trimmomatic][HEADCROP]} SLIDINGWINDOW:{config[trimmomatic][SLIDINGWINDOW]} \
-        MINLEN:{config[trimmomatic][MINLEN]}
+        ILLUMINACLIP:{config[trimmomatic][ILLUMINACLIP]} \
+        HEADCROP:{config[trimmomatic][HEADCROP]} \
+        LEADING:{config[trimmomatic][LEADING]} \
+        SLIDINGWINDOW:{config[trimmomatic][SLIDINGWINDOW]} \
+        TRAILING:{config[trimmomatic][TRAILING]} \
+        AVGQUAL:{config[trimmomatic][AVGQUAL]} \
+        MINLEN:{config[trimmomatic][MINLEN]} \
+        CROP:{config[trimmomatic][CROP]}
+        rm null.fa
         """
 
 rule trimm_quality:
@@ -244,48 +256,61 @@ rule pick_representatives:
         echo "Executed command:\n" $pick_representatives_cmd ;\
         $pick_representatives_cmd
         """
-
-rule classify:
-    version: "1.9"
+rule check_chimeric_sequences:
+    version: "1.9.1"
     input:
         dataset = "step5_pick_representatives/representative_seqs_set.fasta",
         reference_fasta = config["reference_fasta"],
         reference_txt = config["reference_taxonomy"]
     output:
-        "step6_classify/representative_seqs_set_tax_assignments.txt"
+        chimeric_list = "step6_removeChimericSeqs/chimeraList.txt",
+        rep_set = "step6_removeChimericSeqs/representative_seq_noChimera.fasta"
+    message:
+        "\n ===== Check for chimeras and remove chimeric clusters."
+    benchmark:
+        "benchmarks/step6_check_chimeric_sequences.txt"
+    shell:
+        """
+        check_chimeric_seqs_cmd="parallel_identify_chimeric_seqs.py -i {input.dataset} -t {input.reference_txt} -r {input.reference_fasta} -m blast_fragments -o {output.chimeric_list} -O {config[threads]}" ;\
+        echo "Executed command:\n" $check_chimeric_seqs_cmd ;\
+        $check_chimeric_seqs_cmd
+        remove_chimeric_seqs_cmd="filter_fasta.py -f {input.dataset} -o {output.rep_set} -s {output.chimeric_list} -n" ;\
+        echo "Executed command:\n" $remove_chimeric_seqs_cmd ;\
+        $remove_chimeric_seqs_cmd
+        """
+
+rule classify:
+    version: "1.9"
+    input:
+        dataset = "step6_removeChimericSeqs/representative_seq_noChimera.fasta",
+        reference_fasta = config["reference_fasta"],
+        reference_txt = config["reference_taxonomy"]
+    output:
+        "step7_classify/representative_seq_noChimera_tax_assignments.txt"
     message:
         "\n ===== Classify (i.e. assign taxonomy) to representative sequences."
     benchmark:
-        "benchmarks/step6_classify.txt"
+        "benchmarks/step7_classify.txt"
     shell:
-        """
-        classify_cmd="assign_taxonomy.py -i {input.dataset} -m mothur -r {input.reference_fasta} \
-        -t {input.reference_txt} -c {config[assign_taxonomy][c]} -o step6_classify" ;\
-        echo "Executed command:\n" $classify_cmd ;\
-        $classify_cmd
-        """
-    ## Below is the alternative way to classify sequences with parallel RDP classifier from Qiime.
-    ## Note that Qiime needs to be set up to be able to handle parallelization properly
-    #shell:
-    #    """
-    #    classify_cmd="parallel_assign_taxonomy_rdp.py -i {input.dataset} -o step6_classify \
-    #    -r {input.reference_fasta} -t {input.reference_txt} -c {config[assign_taxonomy][c]}" ;\
-    #    echo "Executed command:\n" $classify_cmd ;\
-    #    $classify_cmd
-    #    """
+       """
+       classify_cmd="parallel_assign_taxonomy_rdp.py -i {input.dataset} -o step7_classify \
+       -r {input.reference_fasta} -t {input.reference_txt} --rdp_max_memory 10000 -c {config[assign_taxonomy][c]} -O {config[threads]}" ;\
+       echo "Executed command:\n" $classify_cmd ;\
+       $classify_cmd
+       """
         
 rule make_otu:
     version: "1.9"
     input: 
-        assigned_taxonomy = "step6_classify/representative_seqs_set_tax_assignments.txt",
+        assigned_taxonomy = "step7_classify/representative_seq_noChimera_tax_assignments.txt",
         otu = "step4_pick_otu/all_paired_trimmed_seqs_unsorted_otus.txt"
     output:
-        "step7_otu/otu_table.biom"
+        "step8_otu/otu_table.biom"
     message:
         """\n ===== Make OTU table as a biom file. \n Biom file: the columns correspond to Samples\
  and rows correspond to OTUs and the number of times a sample appears in a particular OTU."""
     benchmark:
-        "benchmarks/step7_otu_make_otu.txt"
+        "benchmarks/step8_otu_make_otu.txt"
     shell:
         """
         make_otu_cmd="make_otu_table.py -i {input.otu} -t {input.assigned_taxonomy} -o {output}" ;\
@@ -295,13 +320,13 @@ rule make_otu:
 
 rule convert_otu_table:
     input:
-        "step7_otu/otu_table.biom"
+        "step8_otu/otu_table.biom"
     output:
-        "step7_otu/otu_table.otu"
+        "step8_otu/otu_table.otu"
     message:
         "\n ===== Convert OTU table in biom format to tab-delimited table format. "
     benchmark:
-        "benchmarks/step7_otu_convert_otu.txt"
+        "benchmarks/step8_otu_convert_otu.txt"
     shell:
         """
         convert_otu_table_cmd="biom convert -i {input} -o {output} --to-tsv --header-key taxonomy" ;\

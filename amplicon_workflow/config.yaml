@@ -4,8 +4,8 @@
 # run snakemake.
 # Note that lines beginning with # are comments, i.e. they are ignored.
 #
-# Author: Oksana Korol
-# Date: 2016.06.16
+# Author: Christine Lowe and Oksana Korol
+# Date: 2017.04.18
 #########################################################################
 
 # Name (path) of the directory where snakemake will be executed; i.e. all other
@@ -18,6 +18,7 @@ workdir: "data"
 # Directory where you unput files (raw amplicon data files with fastq or fastq.gz
 # extension)
 initial_input_dir: "input"
+
 # Path to reference fasta and taxonomy files
 reference_fasta: "unite.fasta"
 reference_taxonomy: "unite.txt"
@@ -38,21 +39,20 @@ input_file_forward_postfix: "_R1_001.fastq.gz"
 input_file_reverse_postfix: "_R2_001.fastq.gz"
  
 # Number of threads to be used for execution of every tool in this workflow
-threads: 1
+threads: 4
 
 # Trimmomatic parameters
 trimmomatic:
-    path: "/home/lowec/TEST/bin/Trimmomatic-0.36/trimmomatic-0.36.jar"
+    path: "/home/bin/Trimmomatic-0.36/trimmomatic-0.36.jar"
     HEADCROP: "15" 
     SLIDINGWINDOW: "4:20" 
     MINLEN: "36"
-    
-    #LEADING: "25"
-    #TRAILING: "25"
-    #SLIDINGWINDOW: "1:25"
-    #MINLEN: "100"
-
-    #LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:36
+    LEADING: "0"
+    TRAILING: "0"
+    CROP: "1000"
+    AVGQUAL: "0"
+    ILLUMINACLIP: "null.fa:0:0:0"
+   
    
 pick_otus:
     s: "0.97"
