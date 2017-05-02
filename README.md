@@ -3,18 +3,30 @@
 ## Synopsis
 This workflow describes a series of steps executed to get from raw fastq files, resulting from the amplicon sequencing of sample(s), to OTU table, describing the taxonomic determination summary for the analysed sample(s). It executes on Linux command line, using a Snakemake workflow management system. 
 
+### Workflow
+
+1. QC of input files
+2. Trim input files
+3. QC of trimmed files
+4. Join forward and referse sequences
+5. QC of joined sequences
+6. Cluster sequences
+7. Pick representative sequences
+8. Detect and remove chimeric representative sequences/clusters
+9. Taxonomic classification
+10. Create OTU table
 
 ## Setup
 
-Make sure you're in the directory where the _Snakefile_ is.
-
-1. Create a _data/input/_ directory off of where the _Snakemake_ file is:
-    
-        $ cd <path_to>/snakemake-workflows/amplicon_workflow/
-        $ mkdir -p data/input
-2. Copy your raw _.fastq.gz_ files to _input_ directory
-3. In _config.yaml_ file, make sure that the _input_file_forward_postfix_ parameter corresponds to the naming of your raw files. Change it, if necessary.
-4. Optional: change tools parameters in _config.yaml_ file.
+1. Create a directory with input data. This should be paired illumina sequences. 
+    * This can be a directory of symbolic links to data elsewhere on a file system. 
+2. In _config.yaml_ file:
+    * Verify the working directory, this is the location of the pipeline output
+    * Verify input directory, this can be an absolute path or relative to the working directory
+    * Verify reference fasta and taxonomy, this can be absolute paths or relative to the working directory
+    * Verify that input sequences file extension 
+    * Verify the _input_file_forward_postfix_ parameter corresponds to the naming of your raw files. Change it, if necessary.
+4. Optional: change tools parameters/paths in _config.yaml_ file.
 
 For details on the workflow tools, their version, arguments used, and order of execution  see _Snakefile_.
 
@@ -22,11 +34,13 @@ For details on the workflow tools, their version, arguments used, and order of e
 
 To check if the workflow will run correctly without executing the steps:
 
-	$ snakemake -np
+	$ snakemake -np --configfile config.yaml
 
 To execute the workflow:
 
-	$ snakemake 
+	$ snakemake --configfile config.yaml
+	
+Note: If you are not in the same directory as the Snakefile you will need the extra parameter `--snakefile` with the path to the Snakefile
 
 ## Installation
 
@@ -40,12 +54,15 @@ This worflow runs on Linux. To install this workflow, either locally or on a clu
 * Trimomatic 0.36
 * Qiime 1.9
 
+Download the latest release of this project:
+
+https://github.com/AAFC-MBB/snakemake-amplicon-metagenomics/releases
+
+OR
+
 Check out this project (requires git):
 
     $ git clone https://github.com/AAFC-MBB/snakemake-workflows.git
-OR
-
-Copy _Snakefile_ and _config.yaml_ files to where you would like to store the workflow and its results.
 
 ## Tests
 
@@ -60,9 +77,11 @@ Execute the tests:
 For more information about Snakemake, visit their website: https://bitbucket.org/snakemake/snakemake/wiki/Home
 
 
-## Author
+## Authors
 
 [Oksana Korol](https://github.com/oxyko)
+
+[Christine Lowe](https://github.com/ChristineLowe)
 
 ## Licensing
 
