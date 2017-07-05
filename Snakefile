@@ -1,6 +1,6 @@
 """ Amplicon Metagenomics Workflow for GRDI EcoBiomics project.
 
-Version: 0.3
+Version: 0.4
 Author: Christine Lowe and Oksana Korol
 Date: 2017.04.18
 
