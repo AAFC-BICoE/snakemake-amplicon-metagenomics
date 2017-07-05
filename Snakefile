@@ -1,6 +1,6 @@
 """ Amplicon Metagenomics Workflow for GRDI EcoBiomics project.
 
-Version: 0.3
+Version: 0.4
 Author: Christine Lowe and Oksana Korol
 Date: 2017.04.18
 
@@ -215,10 +215,12 @@ format and combining all sequences into one file."""
     shell:
         """
         for file in {input.fastq}; do \
-          echo "Converting file $file" ;\
-          sample_id=$(echo $file | rev | cut -d'/' -f1 | rev |cut -d'_' -f1) ;\
-          echo "Sample id: $sample_id"
-          sed -n '1~4s/^@/>'"$sample_id"'_/p;2~4p' "$file" >> {output}; \
+            sample_id=$(echo $file | rev | cut -d'/' -f1 | rev |cut -d'_' -f1-4);\
+            s_id=$(echo $sample_id | sed -e 's/_/\./g');\
+            echo "Converting file $file";\
+            echo "Original sample id: $sample_id";\
+            echo "New sample id: $s_id";\
+            sed -n '1~4s/^@/>'"$s_id"'_/p;2~4p' "$file" >> {output}; \
         done
         """
 
