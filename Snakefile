@@ -137,8 +137,8 @@ rule trimm:
 rule trimm_quality:
     version: "0.11.2"
     input:
-        forward = expand("step1_trimmomatic/{sample}_R1_001_trimmed.fastq", sample = samples_prefix) ,
-        reverse = expand("step1_trimmomatic/{sample}_R2_001_trimmed.fastq", sample = samples_prefix),
+        forward = "step1_trimmomatic/{sample}_R1_001_trimmed.fastq",
+        reverse = "step1_trimmomatic/{sample}_R2_001_trimmed.fastq"
     output:
         forward = "step1_trimmomatic/quality/{sample}_R1_001_trimmed_fastqc.html",
 	reverse = "step1_trimmomatic/quality/{sample}_R2_001_trimmed_fastqc.html",
