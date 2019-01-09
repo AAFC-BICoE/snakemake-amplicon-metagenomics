@@ -48,9 +48,9 @@ This worflow runs on Linux. To install this workflow, either locally or on a clu
 
 ##### Requirements
 * Python 3.5+
-* PyYAML 3.11
+* PyYAML 4.2b1
 * Snakemake 3.7.1
-* FastQC 0.11.2
+* FastQC 0.11.5
 * Trimomatic 0.36
 * Qiime 1.9
 
