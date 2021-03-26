@@ -1,4 +1,5 @@
 # Amplicon Metagenomic Workflow
+## Update: March 2021, Pipeline No Longer Supported as QIIME is available in a 2.0 Version, and 1.9 is no longer supported. 
 
 ## Synopsis
 This workflow describes a series of steps executed to get from raw fastq files, resulting from the amplicon sequencing of sample(s), to OTU table, describing the taxonomic determination summary for the analysed sample(s). It executes on Linux command line, using a Snakemake workflow management system. 
@@ -48,7 +49,7 @@ This worflow runs on Linux. To install this workflow, either locally or on a clu
 
 ##### Requirements
 * Python 3.5+
-* PyYAML 4.2b1
+* PyYAML 5.4+ 
 * Snakemake 3.7.1
 * FastQC 0.11.5
 * Trimomatic 0.36
